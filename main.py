@@ -272,7 +272,9 @@ def actual_stream_response(response, request_data):
         "choices": [
             {
                 "index": 0,
-                "delta": "",
+                "delta": {
+                    "content": ""    
+                },
                 "finish_reason": "stop"
             }
         ]
