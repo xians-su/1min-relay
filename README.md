@@ -1,6 +1,8 @@
 # 1minRelay
 Relay 1min AI API to OpenAI Structure in 1 minute.
 
+Don't forget to star this repository if you like it! 
+
 ## Features
 - bolt.diy support
 - Conversation history support
