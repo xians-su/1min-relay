@@ -9,7 +9,7 @@ Clone the git repo into your machine.
 
 To install dependencies, run:
 ```bash
-pip install -r requirements
+pip install -r requirements.txt
 ```
 
 and then run python3 main.py
