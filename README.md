@@ -22,27 +22,27 @@ Depending on your system, you may need to run python
 From the project directory (where Dockerfile and main.py reside), run:
 
 ```bash
-docker build -t my-1min-relay:latest .
+docker build -t 1min-relay:latest .
 ```
 
 2. Run the Docker Container
 Once built, run a container mapping port 5001 in the container to port 5001 on your host:
 
 ```bash
-docker run -d -p 5001:5001 --name 1min-relay-container my-1min-relay:latest
+docker run -d -p 5001:5001 --name 1min-relay-container 1min-relay:latest
 ```
 
 - `-d` runs the container in detached (background) mode.
 - `-p 5001:5001` maps your host’s port 5001 to the container’s port 5001.
 - `--name 1min-relay-container` is optional, but it makes it easier to stop or remove the container later.
-- The last argument, `my-1min-relay:latest`, is the image name.
+- The last argument, `1min-relay:latest`, is the image name.
 
 
 4. Verify It’s Running
 Check logs (optional):
 
 ```bash
-docker logs -f my-relay-container
+docker logs -f 1min-relay-container
 ```
 You should see your Flask server output: “Server is ready to serve at …”
 
@@ -56,19 +56,19 @@ curl -X GET http://localhost:5001/v1/chat/completions
 To stop the container:
 
 ```bash
-docker stop my-relay-container
+docker stop 1min-relay-container
 ```
 
 To remove the container:
 
 ```bash
-docker rm my-relay-container
+docker rm 1min-relay-container
 ```
 
 To remove the image entirely:
 
 ```bash
-docker rmi my-1min-relay:latest
+docker rmi 1min-relay:latest
 ```
 
 Optional: Run with Docker Compose
@@ -78,7 +78,7 @@ If you prefer Docker Compose, you can create a docker-compose.yml like:
 services:
   my-relay:
     build: .
-    container_name: my-relay-container
+    container_name: 1min-relay-container
     ports:
       - "5001:5001"
 ```
