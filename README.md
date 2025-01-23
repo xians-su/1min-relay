@@ -1,6 +1,17 @@
 # 1minRelay
 Relay 1min AI API to OpenAI Structure in 1 minute.
 
+## Features
+- bolt.diy support
+- Conversation history support
+- Text file upload from some clients are supported.
+- Works with most clients that support OpenAI Custom Endpoint.
+- Relays 1min AI API to OpenAI Structure in 1 minute
+- Easy and Quick to use.
+- Streaming Supported
+- Non-Streaming Supported
+- Docker Support
+
 ## Installation:
 
 Clone the git repo into your machine.
