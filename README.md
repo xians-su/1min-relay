@@ -76,7 +76,7 @@ If you prefer Docker Compose, you can create a docker-compose.yml like:
 
 ```yaml
 services:
-  my-relay:
+  1min-relay:
     build: .
     container_name: 1min-relay-container
     ports:
