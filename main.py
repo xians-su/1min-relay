@@ -62,7 +62,7 @@ def models():
     # Dynamically create the list of models with additional fields
     models_data = []
     one_min_models_data = [
-        {"id": model_name, "object": "model", "owned_by": "1min.ai"}
+        {"id": model_name, "object": "model", "owned_by": "1minai", "created": 1727389042}
         for model_name in ONE_MIN_AVAILABLE_MODELS
     ]
     hugging_models_data = [
