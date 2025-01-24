@@ -3,6 +3,12 @@ name: Build and Publish Docker Image
 on:
   release:
     types: [created]  # Trigger the workflow when a release is created
+  push:
+    branches: [ "main" ]
+    # Publish semver tags as releases.
+    tags: [ 'v*.*.*' ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   build:
