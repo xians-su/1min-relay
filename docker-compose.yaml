@@ -6,6 +6,7 @@ services:
     image: memcached:latest
     networks:
       - 1min-relay-network
+    restart: unless-stopped
     # Does not require to expose port. Only used for internal communication.
   # 1min-relay
   1min-relay:
@@ -22,6 +23,7 @@ services:
       - SUBSET_OF_ONE_MIN_PERMITTED_MODELS=mistral-nemo,gpt-4o-mini,deepseek-chat
       # Set your boolean as "True" or "False" for PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS Default: False
       - PERMIT_MODELS_FROM_SUBSET_ONLY=True
+    restart: unless-stopped
 
 networks:
   1min-relay-network:  # Define the custom network
