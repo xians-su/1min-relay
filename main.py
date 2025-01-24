@@ -79,23 +79,20 @@ ALL_ONE_MIN_AVAILABLE_MODELS = [
 
 
 # Default values
-DEFAULT_ONE_MIN_MODELS = ["mistral-nemo", "gpt-4o", "deepseek-chat"]
-DEFAULT_PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS = False
+SUBSET_OF_ONE_MIN_PERMITTED_MODELS = ["mistral-nemo", "gpt-4o", "deepseek-chat"]
+PERMIT_MODELS_FROM_SUBSET_ONLY = False
 
 # Read environment variables
-one_min_models_env = os.getenv("ONE_MIN_AVAILABLE_MODELS")  # e.g. "mistral-nemo,gpt-4o,deepseek-chat"
-permit_not_in_available_env = os.getenv("PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS")  # e.g. "True" or "False"
+one_min_models_env = os.getenv("SUBSET_OF_ONE_MIN_PERMITTED_MODELS")  # e.g. "mistral-nemo,gpt-4o,deepseek-chat"
+permit_not_in_available_env = os.getenv("PERMIT_MODELS_FROM_SUBSET_ONLY")  # e.g. "True" or "False"
 
 # Parse or fall back to defaults
 if one_min_models_env:
-    ONE_MIN_AVAILABLE_MODELS = one_min_models_env.split(",")
-else:
-    ONE_MIN_AVAILABLE_MODELS = DEFAULT_ONE_MIN_MODELS
+    SUBSET_OF_ONE_MIN_PERMITTED_MODELS = one_min_models_env.split(",")
+
 
 if permit_not_in_available_env and permit_not_in_available_env.lower() == "true":
-    PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS = True
-else:
-    PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS = DEFAULT_PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS
+    PERMIT_MODELS_FROM_SUBSET_ONLY = True
 
 # EXTERNAL_AVAILABLE_MODELS, EXTERNAL_URL, etc. remain the same
 EXTERNAL_AVAILABLE_MODELS = []
@@ -104,7 +101,7 @@ EXTERNAL_API_KEY = ""
 
 # Combine into a single list
 AVAILABLE_MODELS = []
-AVAILABLE_MODELS.extend(ONE_MIN_AVAILABLE_MODELS)
+AVAILABLE_MODELS.extend(SUBSET_OF_ONE_MIN_PERMITTED_MODELS)
 AVAILABLE_MODELS.extend(EXTERNAL_AVAILABLE_MODELS)
 
 @app.route('/v1/models')
@@ -112,7 +109,7 @@ AVAILABLE_MODELS.extend(EXTERNAL_AVAILABLE_MODELS)
 def models():
     # Dynamically create the list of models with additional fields
     models_data = []
-    if PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS:
+    if not PERMIT_MODELS_FROM_SUBSET_ONLY:
         one_min_models_data = [
             {"id": model_name, "object": "model", "owned_by": "1minai", "created": 1727389042}
             for model_name in ALL_ONE_MIN_AVAILABLE_MODELS
@@ -120,7 +117,7 @@ def models():
     else:
         one_min_models_data = [
             {"id": model_name, "object": "model", "owned_by": "1minai", "created": 1727389042}
-            for model_name in ONE_MIN_AVAILABLE_MODELS
+            for model_name in SUBSET_OF_ONE_MIN_PERMITTED_MODELS
         ]
     hugging_models_data = [
         {"id": model_name, "object": "model", "owned_by": "Hugging Face"}
@@ -206,7 +203,7 @@ def conversation():
         user_input = str(combined_text)
 
     prompt_token = calculate_token(str(user_input))
-    if not PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS and request_data.get('model', 'mistral-nemo') not in AVAILABLE_MODELS:
+    if PERMIT_MODELS_FROM_SUBSET_ONLY and request_data.get('model', 'mistral-nemo') not in AVAILABLE_MODELS:
         return ERROR_HANDLER(1002, request_data.get('model', 'mistral-nemo'))
 
     payload = {
