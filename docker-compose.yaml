@@ -1,6 +1,6 @@
 services:
-  my-relay:
+  1min-relay:
     build: .
-    container_name: my-relay-container
+    container_name: 1min-relay-container
     ports:
       - "5001:5001"
