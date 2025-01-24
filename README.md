@@ -76,7 +76,7 @@ You should see your Flask server output: “Server is ready to serve at …”
 Test from your host machine:
 
 ```bash
-curl -X GET http://localhost:5001/v1/chat/completions
+curl -X GET http://localhost:5001/v1/models
 ```
 
 5. Stopping or Removing the Container
