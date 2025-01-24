@@ -109,10 +109,10 @@ services:
     ports:
       - "5001:5001"
     environment:
-      # Use comma-separated string for ONE_MIN_AVAILABLE_MODELS Default: "mistral-nemo", "gpt-4o", "deepseek-chat"
-      - ONE_MIN_AVAILABLE_MODELS=mistral-nemo,gpt-4o-mini,deepseek-chat
-      # Set your boolean as "True" or "False" for PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS Default: False
-      - PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS=True
+      # Use comma-separated string for SUBSET_OF_ONE_MIN_PERMITTED_MODELS Default: "mistral-nemo", "gpt-4o", "deepseek-chat"
+      - SUBSET_OF_ONE_MIN_PERMITTED_MODELS=mistral-nemo,gpt-4o-mini,deepseek-chat
+      # Set your boolean as "True" or "False" for PERMIT_MODELS_FROM_SUBSET_ONLY Default: True
+      - PERMIT_MODELS_FROM_SUBSET_ONLY=True
 ```
 
 Then just run:
