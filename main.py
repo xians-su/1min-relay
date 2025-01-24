@@ -47,6 +47,37 @@ ONE_MIN_API_URL = "https://api.1min.ai/api/features"
 ONE_MIN_CONVERSATION_API_URL = "https://api.1min.ai/api/conversations"
 ONE_MIN_CONVERSATION_API_STREAMING_URL = "https://api.1min.ai/api/features?isStreaming=true"
 
+ALL_ONE_MIN_AVAILABLE_MODELS = [
+    "deepseek-chat",
+    "o1-preview",
+    "o1-mini",
+    "gpt-4o-mini",
+    "gpt-4o",
+    "gpt-4-turbo",
+    "gpt-4",
+    "gpt-3.5-turbo",
+    "claude-instant-1.2",
+    "claude-2.1",
+    "claude-3-5-sonnet-20240620",
+    "claude-3-opus-20240229",
+    "claude-3-sonnet-20240229",
+    "claude-3-haiku-20240307",
+    "gemini-1.0-pro",
+    "gemini-1.5-pro",
+    "gemini-1.5-flash",
+    "mistral-large-latest",
+    "mistral-small-latest",
+    "mistral-nemo",
+    "open-mistral-7b",
+
+   # Replicate
+   "meta/llama-2-70b-chat", 
+   "meta/meta-llama-3-70b-instruct", 
+   "meta/meta-llama-3.1-405b-instruct", 
+   "command"
+]
+
+
 # Default values
 DEFAULT_ONE_MIN_MODELS = ["mistral-nemo", "gpt-4o", "deepseek-chat"]
 DEFAULT_PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS = False
@@ -81,10 +112,16 @@ AVAILABLE_MODELS.extend(EXTERNAL_AVAILABLE_MODELS)
 def models():
     # Dynamically create the list of models with additional fields
     models_data = []
-    one_min_models_data = [
-        {"id": model_name, "object": "model", "owned_by": "1minai", "created": 1727389042}
-        for model_name in ONE_MIN_AVAILABLE_MODELS
-    ]
+    if PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS:
+        one_min_models_data = [
+            {"id": model_name, "object": "model", "owned_by": "1minai", "created": 1727389042}
+            for model_name in ALL_ONE_MIN_AVAILABLE_MODELS
+        ]
+    else:
+        one_min_models_data = [
+            {"id": model_name, "object": "model", "owned_by": "1minai", "created": 1727389042}
+            for model_name in ONE_MIN_AVAILABLE_MODELS
+        ]
     hugging_models_data = [
         {"id": model_name, "object": "model", "owned_by": "Hugging Face"}
         for model_name in EXTERNAL_AVAILABLE_MODELS
