@@ -118,6 +118,6 @@ services:
 Then just run:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 Compose will build and start the container.
