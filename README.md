@@ -35,12 +35,12 @@ Depending on your system, you may need to run python
 
 1. Pull the Docker Image:
 ```bash
-docker pull ghcr.io/kokofixcomputers/1min_relay:main
+docker pull ghcr.io/kokofixcomputers/1min_relay:latest
 ```
 
 2. Run the Docker Container
 ```bash
-docker run -d -p 5001:5001 --name 1min-relay-container ghcr.io/kokofixcomputers/1min_relay:main
+docker run -d -p 5001:5001 --name 1min-relay-container ghcr.io/kokofixcomputers/1min_relay:latest
 ```
 
 #### Self-Build
@@ -104,7 +104,7 @@ If you prefer Docker Compose, you can create a docker-compose.yml like:
 ```yaml
 services:
   1min-relay:
-    image: ghcr.io/kokofixcomputers/1min_relay:main
+    image: ghcr.io/kokofixcomputers/1min_relay:latest
     container_name: 1min-relay-container
     ports:
       - "5001:5001"
