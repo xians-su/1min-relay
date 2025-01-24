@@ -38,9 +38,23 @@ Depending on your system, you may need to run python
 docker pull ghcr.io/kokofixcomputers/1min_relay:latest
 ```
 
-2. Run the Docker Container
+2. To encrease security, 1MinRelay will require it's own network to be able to communicate with memcached.
+To create a network, run:
 ```bash
-docker run -d -p 5001:5001 --name 1min-relay-container ghcr.io/kokofixcomputers/1min_relay:latest
+docker network create 1min-relay-network
+```
+
+3. Run Memcached.
+```bash
+docker run -d --name memcached --network 1min-relay-network memcached
+```
+
+4. Run the 1MinRelay Container:
+```bash
+docker run -d --name 1min-relay-container --network 1min-relay-network -p 5001:5001 \
+  -e ONE_MIN_AVAILABLE_MODELS="mistral-nemo,gpt-4o-mini,deepseek-chat" \
+  -e PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS=True \
+  ghcr.io/kokofixcomputers/1min_relay:latest
 ```
 
 #### Self-Build
@@ -52,16 +66,29 @@ From the project directory (where Dockerfile and main.py reside), run:
 docker build -t 1min-relay:latest .
 ```
 
-2. Run the Docker Container
-Once built, run a container mapping port 5001 in the container to port 5001 on your host:
-
+2. To encrease security, 1MinRelay will require it's own network to be able to communicate with memcached.
+To create a network, run:
 ```bash
-docker run -d -p 5001:5001 --name 1min-relay-container 1min-relay:latest
+docker network create 1min-relay-network
+```
+
+3. Run Memcached.
+```bash
+docker run -d --name memcached --network 1min-relay-network memcached
+```
+
+4. Run the 1MinRelay Container:
+```bash
+docker run -d --name 1min-relay-container --network 1min-relay-network -p 5001:5001 \
+  -e ONE_MIN_AVAILABLE_MODELS="mistral-nemo,gpt-4o-mini,deepseek-chat" \
+  -e PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS=True \
+  1min-relay:latest
 ```
 
 - `-d` runs the container in detached (background) mode.
 - `-p 5001:5001` maps your host’s port 5001 to the container’s port 5001.
 - `--name 1min-relay-container` is optional, but it makes it easier to stop or remove the container later.
+- `-e` runs the container with environment variables.
 - The last argument, `1min-relay:latest`, is the image name.
 
 
@@ -99,25 +126,14 @@ docker rmi 1min-relay:latest
 ```
 
 Optional: Run with Docker Compose
-If you prefer Docker Compose, you can create a docker-compose.yml like:
+If you prefer Docker Compose, you can run the docker compose included with the repo:
 
-```yaml
-services:
-  1min-relay:
-    image: ghcr.io/kokofixcomputers/1min_relay:latest
-    container_name: 1min-relay-container
-    ports:
-      - "5001:5001"
-    environment:
-      # Use comma-separated string for SUBSET_OF_ONE_MIN_PERMITTED_MODELS Default: "mistral-nemo", "gpt-4o", "deepseek-chat"
-      - SUBSET_OF_ONE_MIN_PERMITTED_MODELS=mistral-nemo,gpt-4o-mini,deepseek-chat
-      # Set your boolean as "True" or "False" for PERMIT_MODELS_FROM_SUBSET_ONLY Default: True
-      - PERMIT_MODELS_FROM_SUBSET_ONLY=True
-```
-
-Then just run:
+Just run:
 
 ```bash
 docker compose up -d
 ```
-Compose will build and start the container.
+Compose will automatically do these things for you:
+- Create a network
+- Run Memcached
+- Run the 1MinRelay Container

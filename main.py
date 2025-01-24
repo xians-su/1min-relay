@@ -40,7 +40,9 @@ def calculate_token(sentence, model="DEFAULT"):
 app = Flask(__name__)
 limiter = Limiter(
     get_remote_address,
-    app=app
+    app=app,
+    storage_uri="memcached://memcached:11211",  # Connect to Memcached created with docker
+    in_memory_fallback_enabled=True, # Incase Memcached is not available
 )
 
 ONE_MIN_API_URL = "https://api.1min.ai/api/features"
