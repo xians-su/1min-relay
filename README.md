@@ -4,15 +4,17 @@ Relay 1min AI API to OpenAI Structure in 1 minute.
 Don't forget to star this repository if you like it! 
 
 ## Features
-- bolt.diy support
-- Conversation history support
-- Text file upload from some clients are supported.
-- Works with most clients that support OpenAI Custom Endpoint.
-- Relays 1min AI API to OpenAI Structure in 1 minute
-- Easy and Quick to use.
-- Streaming Supported
-- Non-Streaming Supported
-- Docker Support
+- **bolt.diy Support**: Compatible with bolt.diy for seamless integration.
+- **Conversation History**: Retain and manage conversation history effortlessly.
+- **Text File Upload**: Supports text file uploads from select clients.
+- **Broad Client Compatibility**: Works with most clients supporting OpenAI Custom Endpoint.
+- **Fast and Reliable Relay**: Relays 1min AI API to OpenAI-compatible structure within 1 minute.
+- **User-Friendly**: Easy to set up and quick to use.
+- **Model Exposure Control**: Expose all or a predefined subset of 1min.ai-supported models.
+- **Streaming Support**: Enables real-time streaming for faster interactions.
+- **Non-Streaming Support**: Compatible with non-streaming workflows.
+- **Docker Support**: Deploy easily with Docker for fast and consistent setup.
+
 
 ## Installation:
 
@@ -52,10 +54,15 @@ docker run -d --name memcached --network 1min-relay-network memcached
 4. Run the 1MinRelay Container:
 ```bash
 docker run -d --name 1min-relay-container --network 1min-relay-network -p 5001:5001 \
-  -e ONE_MIN_AVAILABLE_MODELS="mistral-nemo,gpt-4o-mini,deepseek-chat" \
-  -e PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS=True \
+  -e SUBSET_OF_ONE_MIN_PERMITTED_MODELS="mistral-nemo,gpt-4o-mini,deepseek-chat" \
+  -e PERMIT_MODELS_FROM_SUBSET_ONLY=True \
   ghcr.io/kokofixcomputers/1min_relay:latest
 ```
+Environment Variables:
+
+- `SUBSET_OF_ONE_MIN_PERMITTED_MODELS`: Specifies a subset of 1min.ai models to expose. Default: mistral-nemo,gpt-4o,deepseek-chat.
+- `PERMIT_MODELS_FROM_SUBSET_ONLY`: Restricts model usage to the specified subset. Set to True to enforce this restriction or False to allow all models supported by 1min.ai. Default: True.
+
 
 #### Self-Build
 
@@ -80,16 +87,17 @@ docker run -d --name memcached --network 1min-relay-network memcached
 4. Run the 1MinRelay Container:
 ```bash
 docker run -d --name 1min-relay-container --network 1min-relay-network -p 5001:5001 \
-  -e ONE_MIN_AVAILABLE_MODELS="mistral-nemo,gpt-4o-mini,deepseek-chat" \
-  -e PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS=True \
+  -e SUBSET_OF_ONE_MIN_PERMITTED_MODELS="mistral-nemo,gpt-4o-mini,deepseek-chat" \
+  -e PERMIT_MODELS_FROM_SUBSET_ONLY=True \
   1min-relay:latest
 ```
 
 - `-d` runs the container in detached (background) mode.
 - `-p 5001:5001` maps your host’s port 5001 to the container’s port 5001.
 - `--name 1min-relay-container` is optional, but it makes it easier to stop or remove the container later.
-- `-e` runs the container with environment variables.
-- The last argument, `1min-relay:latest`, is the image name.
+- `-e`: Specifies environment variables.
+- `SUBSET_OF_ONE_MIN_PERMITTED_MODELS`: Specifies a subset of 1min.ai models to expose. Default: mistral-nemo,gpt-4o,deepseek-chat.
+- `PERMIT_MODELS_FROM_SUBSET_ONLY`: Restricts model usage to the specified subset. Set to True to enforce this restriction or False to allow all models supported by 1min.ai. Default: True.
 
 
 4. Verify It’s Running

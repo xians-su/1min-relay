@@ -19,9 +19,9 @@ services:
       - memcached
     environment:
       # Use comma-separated string for ONE_MIN_AVAILABLE_MODELS Default: "mistral-nemo", "gpt-4o", "deepseek-chat"
-      - ONE_MIN_AVAILABLE_MODELS=mistral-nemo,gpt-4o-mini,deepseek-chat
+      - SUBSET_OF_ONE_MIN_PERMITTED_MODELS=mistral-nemo,gpt-4o-mini,deepseek-chat
       # Set your boolean as "True" or "False" for PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS Default: False
-      - PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS=True
+      - PERMIT_MODELS_FROM_SUBSET_ONLY=True
 
 networks:
   1min-relay-network:  # Define the custom network
