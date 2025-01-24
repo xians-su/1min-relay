@@ -47,14 +47,34 @@ ONE_MIN_API_URL = "https://api.1min.ai/api/features"
 ONE_MIN_CONVERSATION_API_URL = "https://api.1min.ai/api/conversations"
 ONE_MIN_CONVERSATION_API_STREAMING_URL = "https://api.1min.ai/api/features?isStreaming=true"
 
-ONE_MIN_AVAILABLE_MODELS = ["mistral-nemo", "gpt-4o", "deepseek-chat"] # Models must be in the api name.
-EXTERNAL_AVAILABLE_MODELS = [] # external API models
-EXTERNAL_URL = "https://api.openai.com/v1/chat/completions" # Redirect URL to an external API if not available in 1 min. API MUST BE IN OPENAI STRUCTURE API.
-EXTERNAL_API_KEY = "" # API key to access the external
+# Default values
+DEFAULT_ONE_MIN_MODELS = ["mistral-nemo", "gpt-4o", "deepseek-chat"]
+DEFAULT_PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS = False
+
+# Read environment variables
+one_min_models_env = os.getenv("ONE_MIN_AVAILABLE_MODELS")  # e.g. "mistral-nemo,gpt-4o,deepseek-chat"
+permit_not_in_available_env = os.getenv("PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS")  # e.g. "True" or "False"
+
+# Parse or fall back to defaults
+if one_min_models_env:
+    ONE_MIN_AVAILABLE_MODELS = one_min_models_env.split(",")
+else:
+    ONE_MIN_AVAILABLE_MODELS = DEFAULT_ONE_MIN_MODELS
+
+if permit_not_in_available_env and permit_not_in_available_env.lower() == "true":
+    PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS = True
+else:
+    PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS = DEFAULT_PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS
+
+# EXTERNAL_AVAILABLE_MODELS, EXTERNAL_URL, etc. remain the same
+EXTERNAL_AVAILABLE_MODELS = []
+EXTERNAL_URL = "https://api.openai.com/v1/chat/completions"
+EXTERNAL_API_KEY = ""
+
+# Combine into a single list
 AVAILABLE_MODELS = []
 AVAILABLE_MODELS.extend(ONE_MIN_AVAILABLE_MODELS)
 AVAILABLE_MODELS.extend(EXTERNAL_AVAILABLE_MODELS)
-PERMIT_MODELS_NOT_IN_AVAILABLE_MODELS = False
 
 @app.route('/v1/models')
 @limiter.limit("500 per minute")
