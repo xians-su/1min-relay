@@ -31,6 +31,20 @@ Depending on your system, you may need to run python
 
 ### Docker
 
+#### Pre-Built images
+
+1. Pull the Docker Image:
+```bash
+docker pull ghcr.io/kokofixcomputers/1min_relay:main
+```
+
+2. Run the Docker Container
+```bash
+docker run -d -p 5001:5001 --name 1min-relay-container ghcr.io/kokofixcomputers/1min_relay:main
+```
+
+#### Self-Build
+
 1. Build the Docker Image
 From the project directory (where Dockerfile and main.py reside), run:
 
