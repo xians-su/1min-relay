@@ -80,7 +80,7 @@ ALL_ONE_MIN_AVAILABLE_MODELS = [
 
 # Default values
 SUBSET_OF_ONE_MIN_PERMITTED_MODELS = ["mistral-nemo", "gpt-4o", "deepseek-chat"]
-PERMIT_MODELS_FROM_SUBSET_ONLY = False
+PERMIT_MODELS_FROM_SUBSET_ONLY = True
 
 # Read environment variables
 one_min_models_env = os.getenv("SUBSET_OF_ONE_MIN_PERMITTED_MODELS")  # e.g. "mistral-nemo,gpt-4o,deepseek-chat"
@@ -91,8 +91,8 @@ if one_min_models_env:
     SUBSET_OF_ONE_MIN_PERMITTED_MODELS = one_min_models_env.split(",")
 
 
-if permit_not_in_available_env and permit_not_in_available_env.lower() == "true":
-    PERMIT_MODELS_FROM_SUBSET_ONLY = True
+if permit_not_in_available_env and permit_not_in_available_env.lower() == "false":
+    PERMIT_MODELS_FROM_SUBSET_ONLY = False
 
 # EXTERNAL_AVAILABLE_MODELS, EXTERNAL_URL, etc. remain the same
 EXTERNAL_AVAILABLE_MODELS = []
