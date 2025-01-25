@@ -466,4 +466,4 @@ Enter this url to OpenAI clients supporting custom endpoint:
 If does not work, try:
 {internal_ip}:5001/v1/chat/completions
 {printedcolors.Color.reset}""")
-    serve(app, host='0.0.0.0', port=5001, threads=6)
+    serve(app, host='0.0.0.0', port=5001, threads=6) # Thread has a default of 4 if not specified. We use 6 to increase performance and allow con-current requests.
