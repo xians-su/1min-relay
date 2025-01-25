@@ -58,7 +58,7 @@ docker run -d --name memcached --network 1min-relay-network memcached
 docker run -d --name 1min-relay-container --network 1min-relay-network -p 5001:5001 \
   -e SUBSET_OF_ONE_MIN_PERMITTED_MODELS="mistral-nemo,gpt-4o-mini,deepseek-chat" \
   -e PERMIT_MODELS_FROM_SUBSET_ONLY=True \
-  ghcr.io/kokofixcomputers/1min_relay:latest
+  ghcr.io/kokofixcomputers/1min-relay:latest
 ```
 Environment Variables:
 
