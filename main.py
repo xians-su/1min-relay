@@ -130,6 +130,13 @@ AVAILABLE_MODELS = []
 AVAILABLE_MODELS.extend(SUBSET_OF_ONE_MIN_PERMITTED_MODELS)
 AVAILABLE_MODELS.extend(EXTERNAL_AVAILABLE_MODELS)
 
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        return ERROR_HANDLER(1212)
+    if request.method == 'GET':
+        internal_ip = socket.gethostbyname(socket.gethostname())
+        return "Congratulations! Your API is working! You can now make requests to the API.\n\nEndpoint: " + internal_ip + ':5001/v1'
 @app.route('/v1/models')
 @limiter.limit("500 per minute")
 def models():
@@ -169,6 +176,7 @@ def ERROR_HANDLER(code, model=None, key=None):
     error_codes = {
         1002: {"message": f"The model {model} does not exist.", "type": "invalid_request_error", "param": None, "code": "model_not_found", "http_code": 400},
         1020: {"message": f"Incorrect API key provided: {key}. You can find your API key at https://app.1min.ai/api.", "type": "authentication_error", "param": None, "code": "invalid_api_key", "http_code": 401},
+        1212: {"message": f"Incorrect Endpoint. Please use the /v1/chat/completions endpoint.", "type": "invalid_request_error", "param": None, "code": "invalid_request_error", "http_code": 400},
     }
     # Return the error in a openai format
     error_data = {k: v for k, v in error_codes.get(code, {"message": "Unknown error", "type": "unknown_error", "param": None, "code": None}).items() if k != "http_code"}
