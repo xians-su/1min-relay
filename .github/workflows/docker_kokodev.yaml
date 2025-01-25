@@ -79,6 +79,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           # Leverage the automatically generated tags from metadata-action...
           # and add your own "latest" tag
+          platforms: linux/amd64,linux/arm64
           tags: |
             ${{ steps.meta.outputs.tags }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
