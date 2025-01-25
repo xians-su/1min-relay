@@ -2,7 +2,7 @@ flask
 requests
 waitress
 mistral_common
-flask_limiter
-python-memcached
+flask-limiter
+limits[memcached]
 coloredlogs
 printedcolors
