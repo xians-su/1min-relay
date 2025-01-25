@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, make_response, Response
 import requests
 import time
 import uuid
+import warnings
 from waitress import serve
 import json
 import tiktoken
@@ -17,6 +18,9 @@ import coloredlogs
 import printedcolors
 import base64
 
+# Suppress warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="flask_limiter.extension")
+
 # Create a logger object
 logger = logging.getLogger(__name__)
 
@@ -31,7 +35,8 @@ def check_if_storage_folder_exists():
     if not os.path.exists("storage"):
         os.makedirs("storage")
         
-print('''  _ __  __ _      ___     _           
+logger.info('''
+    _ __  __ _      ___     _           
  / |  \/  (_)_ _ | _ \___| |__ _ _  _ 
  | | |\/| | | ' \|   / -_) / _` | || |
  |_|_|  |_|_|_||_|_|_\___|_\__,_|\_, |
@@ -454,12 +459,12 @@ def actual_stream_response(response, request_data, model, prompt_tokens):
 
 if __name__ == '__main__':
     internal_ip = socket.gethostbyname(socket.gethostname())
-    print(printedcolors.Color.fg.lightcyan)
-    print('\n\nServer is ready to serve at:')
-    print('Internal IP: ' + internal_ip + ':5001')
-    print('\nEnter this url to OpenAI clients supporting custom endpoint:')
-    print(internal_ip + ':5001/v1')
-    print('If does not work, try:')
-    print(internal_ip + ':5001/v1/chat/completions')
-    print(printedcolors.Color.reset)
+    logger.info(f"""{printedcolors.Color.fg.lightcyan}  
+Server is ready to serve at:
+Internal IP: {internal_ip}:5001
+Enter this url to OpenAI clients supporting custom endpoint:
+{internal_ip}:5001/v1
+If does not work, try:
+{internal_ip}:5001/v1/chat/completions
+{printedcolors.Color.reset}""")
     serve(app, host='0.0.0.0', port=5001, threads=6)
