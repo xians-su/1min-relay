@@ -1,4 +1,4 @@
-# 1minRelay
+# 1min-Relay
 Relay 1min AI API to OpenAI Structure in 1 minute.
 
 Don't forget to star this repository if you like it! 
