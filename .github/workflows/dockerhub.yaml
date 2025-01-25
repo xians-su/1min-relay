@@ -5,7 +5,6 @@ on:
     types: [created]  # Trigger the workflow when a release is created
   push:
     branches: [ "main" ]
-    # Publish semver tags as releases.
     tags: [ 'v*.*.*' ]
   pull_request:
     branches: [ "main" ]
@@ -14,30 +13,28 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        platform: [linux/amd64, linux/arm64]  # Specify the platforms you want to build for
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3  # Set up QEMU for cross-platform builds
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3  # Set up QEMU for cross-platform builds
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3  # Set up Docker Buildx for building multi-architecture images
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3  # Set up Docker Buildx for building multi-architecture images
 
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}  # Your Docker Hub username
-        password: ${{ secrets.DOCKER_PASSWORD }}  # Your Docker Hub password or access token
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}  # Your Docker Hub username
+          password: ${{ secrets.DOCKER_PASSWORD }}  # Your Docker Hub password or access token
 
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v3
-      with:
-        context: .  # Context for the build; typically the root of your repository
-        push: true   # Push the image to the registry after building
-        tags: kokofixcomputers/1minrelay:latest  # Universal tag
-        platforms: ${{ matrix.platform }}  # Use the platform from the matrix
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v3
+        with:
+          context: .  # Context for the build; typically the root of your repository
+          push: true   # Push the image to the registry after building
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            kokofixcomputers/1minrelay:${{ github.sha }}
+            kokofixcomputers/1minrelay:latest
