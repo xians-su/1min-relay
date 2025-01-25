@@ -10,11 +10,28 @@ from mistral_common.tokens.tokenizers.mistral import MistralTokenizer
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import os
+import logging
+import coloredlogs
+import printedcolors
+
+# Create a logger object
+logger = logging.getLogger(__name__)
+
+# Install coloredlogs with desired log level
+coloredlogs.install(level='DEBUG', logger=logger)
+
+
 
 # Function to ensure the storage directory exists
 def check_if_storage_folder_exists():
     if not os.path.exists("storage"):
         os.makedirs("storage")
+        
+print('''  _ __  __ _      ___     _           
+ / |  \/  (_)_ _ | _ \___| |__ _ _  _ 
+ | | |\/| | | ' \|   / -_) / _` | || |
+ |_|_|  |_|_|_||_|_|_\___|_\__,_|\_, |
+                                 |__/ ''')
 
 
 def calculate_token(sentence, model="DEFAULT"):
@@ -38,12 +55,19 @@ def calculate_token(sentence, model="DEFAULT"):
         tokens = encoding.encode(sentence)
         return len(tokens)
 app = Flask(__name__)
-limiter = Limiter(
-    get_remote_address,
-    app=app,
-    storage_uri="memcached://memcached:11211",  # Connect to Memcached created with docker
-    in_memory_fallback_enabled=True, # Incase Memcached is not available
-)
+try:
+    limiter = Limiter(
+        get_remote_address,
+        app=app,
+        storage_uri="memcached://memcached:11211",  # Connect to Memcached created with docker
+    )
+except:
+    limiter = Limiter(
+        get_remote_address,
+        app=app,
+    )
+    logger.warning("Memcached is not available. Using in-memory storage for rate limiting. Not-Recommended")
+
 
 ONE_MIN_API_URL = "https://api.1min.ai/api/features"
 ONE_MIN_CONVERSATION_API_URL = "https://api.1min.ai/api/conversations"
@@ -148,6 +172,7 @@ def ERROR_HANDLER(code, model=None, key=None):
     }
     # Return the error in a openai format
     error_data = {k: v for k, v in error_codes.get(code, {"message": "Unknown error", "type": "unknown_error", "param": None, "code": None}).items() if k != "http_code"}
+    logger.error(f"An error has occurred while processing the user's request. Error code: {code}")
     return jsonify({"error": error_data}), error_codes.get(code, {}).get("http_code", 400)
 
 def format_conversation_history(messages, new_input):
@@ -183,6 +208,7 @@ def conversation():
 
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith("Bearer "):
+        logger.error("Invalid Authentication")
         return jsonify({"error": {"message": "Invalid Authentication", "type": "invalid_request_error", "param": None, "code": None}}), 401
 
     api_key = auth_header.split(" ")[1]
@@ -221,7 +247,7 @@ def conversation():
     headers = {"API-KEY": api_key, 'Content-Type': 'application/json'}
 
     if not request_data.get('stream', False):
-        print('NON-STREAM')
+        logger.debug("Non-Streaming AI Response")
         response = requests.post(ONE_MIN_API_URL, json=payload, headers=headers)
         response.raise_for_status()
         one_min_response = response.json()
@@ -233,11 +259,12 @@ def conversation():
         return response, 200
     
     else:
-        print('STREAM')
+        logger.debug("Streaming AI Response")
         response_stream = requests.post(ONE_MIN_CONVERSATION_API_STREAMING_URL, data=json.dumps(payload), headers=headers, stream=True)
         if response_stream.status_code != 200:
             if response_stream.status_code == 401:
                 return ERROR_HANDLER(1020)
+            logger.error(f"An unknown error occurred while processing the user's request. Error code: {response_stream.status_code}")
             return ERROR_HANDLER(response_stream.status_code)
         return Response(actual_stream_response(response_stream, request_data), content_type='text/event-stream')
 def handle_options_request():
@@ -340,10 +367,12 @@ def actual_stream_response(response, request_data):
 
 if __name__ == '__main__':
     internal_ip = socket.gethostbyname(socket.gethostname())
+    print(printedcolors.Color.fg.lightcyan)
     print('\n\nServer is ready to serve at:')
     print('Internal IP: ' + internal_ip + ':5001')
     print('\nEnter this url to OpenAI clients supporting custom endpoint:')
     print(internal_ip + ':5001/v1')
     print('If does not work, try:')
     print(internal_ip + ':5001/v1/chat/completions')
+    print(printedcolors.Color.reset)
     serve(app, host='0.0.0.0', port=5001, threads=6)

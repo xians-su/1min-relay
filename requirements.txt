@@ -4,3 +4,5 @@ waitress
 mistral_common
 flask_limiter
 python-memcached
+coloredlogs
+printedcolors
