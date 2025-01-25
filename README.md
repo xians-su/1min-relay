@@ -39,7 +39,7 @@ Depending on your system, you may need to run python
 
 1. Pull the Docker Image:
 ```bash
-docker pull ghcr.io/kokofixcomputers/1min-relay:latest
+docker pull kokofixcomputers/1min-relay:latest
 ```
 
 2. To encrease security, 1MinRelay will require it's own network to be able to communicate with memcached.
@@ -58,7 +58,7 @@ docker run -d --name memcached --network 1min-relay-network memcached
 docker run -d --name 1min-relay-container --network 1min-relay-network -p 5001:5001 \
   -e SUBSET_OF_ONE_MIN_PERMITTED_MODELS="mistral-nemo,gpt-4o-mini,deepseek-chat" \
   -e PERMIT_MODELS_FROM_SUBSET_ONLY=True \
-  ghcr.io/kokofixcomputers/1min-relay:latest
+  kokofixcomputers/1min-relay:latest
 ```
 Environment Variables:
 
