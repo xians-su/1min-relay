@@ -14,6 +14,8 @@ Don't forget to star this repository if you like it!
 - **Streaming Support**: Enables real-time streaming for faster interactions.
 - **Non-Streaming Support**: Compatible with non-streaming workflows.
 - **Docker Support**: Deploy easily with Docker for fast and consistent setup.
+- **Document Support**: Supports document uploads for enhanced functionality. Some include .docx, .pdf, .txt, .yaml and etc.
+- **Image Upload**: Supports image uploads for enhanced functionality.
 
 
 ## Installation:
