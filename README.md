@@ -37,7 +37,7 @@ Depending on your system, you may need to run python
 
 1. Pull the Docker Image:
 ```bash
-docker pull ghcr.io/kokofixcomputers/1min_relay:latest
+docker pull ghcr.io/kokofixcomputers/1min-relay:latest
 ```
 
 2. To encrease security, 1MinRelay will require it's own network to be able to communicate with memcached.
