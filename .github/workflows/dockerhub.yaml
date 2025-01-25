@@ -38,3 +38,5 @@ jobs:
           tags: |
             kokofixcomputers/1minrelay:${{ github.sha }}
             kokofixcomputers/1minrelay:latest
+            kokofixcomputers/1min-relay:${{ github.sha }}
+            kokofixcomputers/1min-relay:latest
