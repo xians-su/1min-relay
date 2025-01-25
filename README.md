@@ -17,6 +17,7 @@ Don't forget to star this repository if you like it!
 - **Document Support**: Supports document uploads for enhanced functionality. Some include .docx, .pdf, .txt, .yaml and etc.
 - **Image Upload**: Supports image uploads for enhanced functionality.
 - **ARM64 and AMD64 Support**: Compatible with both ARM64 and AMD64 architectures.
+- **Multiple Requests**: Supports multiple requests simultaneously.
 
 
 ## Installation:
