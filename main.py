@@ -241,6 +241,8 @@ def conversation():
     prompt_token = calculate_token(str(user_input))
     if PERMIT_MODELS_FROM_SUBSET_ONLY and request_data.get('model', 'mistral-nemo') not in AVAILABLE_MODELS:
         return ERROR_HANDLER(1002, request_data.get('model', 'mistral-nemo'))
+    
+    logger.debug(f"Proccessing {prompt_token} prompt tokens with model {request_data.get('model', 'mistral-nemo')}")
 
     payload = {
         "type": "CHAT_WITH_AI",
