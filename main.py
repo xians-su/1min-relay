@@ -56,7 +56,7 @@ def calculate_token(sentence, model="DEFAULT"):
         tokenized = tokenizer.encode_chat_completion(
             ChatCompletionRequest(
                 messages=[
-                    UserMessage(content="What's the weather like today in Paris"),
+                    UserMessage(content=sentence),
                 ],
                 model=model_name,
             )
