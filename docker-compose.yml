@@ -8,7 +8,7 @@ services:
     # Does not require to expose port. Only used for internal communication.
   # 1min-relay
   1min-relay:
-    image: kokofixcomputers/1min-relay:latest # Pull from GitHub.
+    image: kokofixcomputers/1min-relay:latest
     container_name: 1min-relay-container
     ports:
       - "5001:5001"
