@@ -99,7 +99,7 @@ docker run -d --name 1min-relay-container --network 1min-relay-network -p 5001:5
 - `--name 1min-relay-container` is optional, but it makes it easier to stop or remove the container later.
 - `-e`: Specifies environment variables.
 - `SUBSET_OF_ONE_MIN_PERMITTED_MODELS`: Specifies a subset of 1min.ai models to expose. Default: mistral-nemo,gpt-4o,deepseek-chat.
-- `PERMIT_MODELS_FROM_SUBSET_ONLY`: Restricts model usage to the specified subset. Set to True to enforce this restriction or False to allow all models supported by 1min.ai. Default: True.
+- `PERMIT_MODELS_FROM_SUBSET_ONLY`: Restricts model usage to the specified subset. Set to True to enforce this restriction or False to allow all models supported by 1min.ai. Default: False.
 
 
 4. Verify It’s Running
@@ -147,3 +147,7 @@ Compose will automatically do these things for you:
 - Create a network
 - Run Memcached
 - Run the 1min-relay Container
+
+### Environment Variables
+- `SUBSET_OF_ONE_MIN_PERMITTED_MODELS`: Specifies a subset of 1min.ai models to expose. Default: mistral-nemo,gpt-4o,deepseek-chat.
+- `PERMIT_MODELS_FROM_SUBSET_ONLY`: Restricts model usage to the specified subset. Set to True to enforce this restriction or False to allow all models supported by 1min.ai. Default: False.
