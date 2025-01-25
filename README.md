@@ -42,7 +42,7 @@ Depending on your system, you may need to run python
 docker pull kokofixcomputers/1min-relay:latest
 ```
 
-2. To encrease security, 1MinRelay will require it's own network to be able to communicate with memcached.
+2. To encrease security, 1min-relay will require it's own network to be able to communicate with memcached.
 To create a network, run:
 ```bash
 docker network create 1min-relay-network
@@ -53,7 +53,7 @@ docker network create 1min-relay-network
 docker run -d --name memcached --network 1min-relay-network memcached
 ```
 
-4. Run the 1MinRelay Container:
+4. Run the 1min-relay Container:
 ```bash
 docker run -d --name 1min-relay-container --network 1min-relay-network -p 5001:5001 \
   -e SUBSET_OF_ONE_MIN_PERMITTED_MODELS="mistral-nemo,gpt-4o-mini,deepseek-chat" \
@@ -75,7 +75,7 @@ From the project directory (where Dockerfile and main.py reside), run:
 docker build -t 1min-relay:latest .
 ```
 
-2. To encrease security, 1MinRelay will require it's own network to be able to communicate with memcached.
+2. To encrease security, 1min-relay will require it's own network to be able to communicate with memcached.
 To create a network, run:
 ```bash
 docker network create 1min-relay-network
@@ -86,7 +86,7 @@ docker network create 1min-relay-network
 docker run -d --name memcached --network 1min-relay-network memcached
 ```
 
-4. Run the 1MinRelay Container:
+4. Run the 1min-relay Container:
 ```bash
 docker run -d --name 1min-relay-container --network 1min-relay-network -p 5001:5001 \
   -e SUBSET_OF_ONE_MIN_PERMITTED_MODELS="mistral-nemo,gpt-4o-mini,deepseek-chat" \
@@ -146,4 +146,4 @@ docker compose up -d
 Compose will automatically do these things for you:
 - Create a network
 - Run Memcached
-- Run the 1MinRelay Container
+- Run the 1min-relay Container
