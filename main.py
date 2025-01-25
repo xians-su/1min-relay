@@ -12,7 +12,6 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import os
 import logging
-from PIL import Image
 from io import BytesIO
 import coloredlogs
 import printedcolors
