@@ -335,6 +335,7 @@ def conversation():
     headers = {"API-KEY": api_key, 'Content-Type': 'application/json'}
 
     if not request_data.get('stream', False):
+        # Non-Streaming Response
         logger.debug("Non-Streaming AI Response")
         response = requests.post(ONE_MIN_API_URL, json=payload, headers=headers)
         response.raise_for_status()
@@ -347,6 +348,7 @@ def conversation():
         return response, 200
     
     else:
+        # Streaming Response
         logger.debug("Streaming AI Response")
         response_stream = requests.post(ONE_MIN_CONVERSATION_API_STREAMING_URL, data=json.dumps(payload), headers=headers, stream=True)
         if response_stream.status_code != 200:
@@ -354,7 +356,7 @@ def conversation():
                 return ERROR_HANDLER(1020)
             logger.error(f"An unknown error occurred while processing the user's request. Error code: {response_stream.status_code}")
             return ERROR_HANDLER(response_stream.status_code)
-        return Response(actual_stream_response(response_stream, request_data, request_data.get('model', 'mistral-nemo'), int(prompt_token)), content_type='text/event-stream')
+        return Response(stream_response(response_stream, request_data, request_data.get('model', 'mistral-nemo'), int(prompt_token)), content_type='text/event-stream')
 def handle_options_request():
     response = make_response()
     response.headers.add('Access-Control-Allow-Origin', '*')
@@ -393,7 +395,7 @@ def set_response_headers(response):
     response.headers['Access -Control-Allow-Origin'] = '*'
     response.headers['X-Request-ID'] = str (uuid.uuid4())
 
-def actual_stream_response(response, request_data, model, prompt_tokens):
+def stream_response(response, request_data, model, prompt_tokens):
     all_chunks = ""
     for chunk in response.iter_content(chunk_size=1024):
         finish_reason = None
