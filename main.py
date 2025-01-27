@@ -10,7 +10,7 @@ import socket
 from mistral_common.tokens.tokenizers.mistral import MistralTokenizer
 from mistral_common.protocol.instruct.messages import UserMessage
 from mistral_common.protocol.instruct.request import ChatCompletionRequest
-
+from pymemcache.client import base
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import os
@@ -29,7 +29,23 @@ logger = logging.getLogger(__name__)
 # Install coloredlogs with desired log level
 coloredlogs.install(level='DEBUG', logger=logger)
 
-
+def check_memcached_connection(host='localhost', port=11211):
+    try:
+        # Attempt to connect to Memcached
+        client = base.Client((host, port))
+        
+        # If the connection is successful, try setting a key to ensure it's working
+        client.set('test_key', 'test_value')
+        
+        # If setting the key succeeds, retrieve it to verify
+        if client.get('test_key') == b'test_value':
+            # Close the connection
+            client.close()
+            return True
+        else:
+            return False
+    except Exception as e:
+        return False
 
 
 # Function to ensure the storage directory exists
@@ -76,13 +92,13 @@ def calculate_token(sentence, model="DEFAULT"):
         tokens = encoding.encode(sentence)
         return len(tokens)
 app = Flask(__name__)
-try:
+if check_memcached_connection():
     limiter = Limiter(
         get_remote_address,
         app=app,
         storage_uri="memcached://memcached:11211",  # Connect to Memcached created with docker
     )
-except:
+else:
     # Used for ratelimiting without memcached
     limiter = Limiter(
         get_remote_address,

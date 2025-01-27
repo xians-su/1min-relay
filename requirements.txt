@@ -6,3 +6,4 @@ flask-limiter
 limits[memcached]
 coloredlogs
 printedcolors
+pymemcache
