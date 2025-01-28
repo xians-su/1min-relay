@@ -20,7 +20,7 @@ import coloredlogs
 import printedcolors
 import base64
 
-# Suppress warnings
+# Suppress warnings from flask_limiter
 warnings.filterwarnings("ignore", category=UserWarning, module="flask_limiter.extension")
 
 # Create a logger object
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 # Install coloredlogs with desired log level
 coloredlogs.install(level='DEBUG', logger=logger)
 
-def check_memcached_connection(host='localhost', port=11211):
+def check_memcached_connection(host='memcached', port=11211):
     try:
         # Attempt to connect to Memcached
         client = base.Client((host, port))
@@ -67,7 +67,7 @@ def calculate_token(sentence, model="DEFAULT"):
     if model.startswith("mistral"):
         # Initialize the Mistral tokenizer
         tokenizer = MistralTokenizer.v3(is_tekken=True)
-        model_name = "open-mistral-nemo"
+        model_name = "open-mistral-nemo" # Default to Mistral Nemo
         tokenizer = MistralTokenizer.from_model(model_name)
         tokenized = tokenizer.encode_chat_completion(
             ChatCompletionRequest(
@@ -188,8 +188,7 @@ def models():
                 "id": model_name,
                 "object": "model",
                 "owned_by": "1minai",
-                "created": 1727389042,
-                "capabilities": {"text": True, "vision": model_name in vision_supported_models}
+                "created": 1727389042
             }
             for model_name in ALL_ONE_MIN_AVAILABLE_MODELS
         ]
@@ -200,18 +199,6 @@ def models():
         ]
     models_data.extend(one_min_models_data)
     return jsonify({"data": models_data, "object": "list"})
-
-def create_convo(api):
-    headers = {
-        "API-KEY": api,
-        "Content-Type": "application/json"
-    }
-    data = {
-        "title": "New Managed Conversation",
-        "type": "CHAT_WITH_AI",
-    }
-    response = requests.post(ONE_MIN_CONVERSATION_API_URL, headers=headers, data=json.dumps(data))
-    return response.json()
 
 def ERROR_HANDLER(code, model=None, key=None):
     # Handle errors in OpenAI-Structued Error
