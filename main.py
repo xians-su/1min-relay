@@ -10,7 +10,7 @@ import socket
 from mistral_common.tokens.tokenizers.mistral import MistralTokenizer
 from mistral_common.protocol.instruct.messages import UserMessage
 from mistral_common.protocol.instruct.request import ChatCompletionRequest
-from pymemcache.client import base
+from pymemcache.client.base import Client
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import os
@@ -31,20 +31,15 @@ coloredlogs.install(level='DEBUG', logger=logger)
 
 def check_memcached_connection(host='memcached', port=11211):
     try:
-        # Attempt to connect to Memcached
-        client = base.Client((host, port))
-        
-        # If the connection is successful, try setting a key to ensure it's working
+        client = Client((host, port))
         client.set('test_key', 'test_value')
-        
-        # If setting the key succeeds, retrieve it to verify
         if client.get('test_key') == b'test_value':
-            # Close the connection
-            client.close()
+            client.delete('test_key')  # Clean up
             return True
         else:
             return False
     except Exception as e:
+        print(f"Error: {e}")
         return False
 
 
