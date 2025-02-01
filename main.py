@@ -24,7 +24,7 @@ import base64
 warnings.filterwarnings("ignore", category=UserWarning, module="flask_limiter.extension")
 
 # Create a logger object
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("1min-relay")
 
 # Install coloredlogs with desired log level
 coloredlogs.install(level='DEBUG', logger=logger)
@@ -38,15 +38,8 @@ def check_memcached_connection(host='memcached', port=11211):
             return True
         else:
             return False
-    except Exception as e:
-        print(f"Error: {e}")
+    except:
         return False
-
-
-# Function to ensure the storage directory exists
-def check_if_storage_folder_exists():
-    if not os.path.exists("storage"):
-        os.makedirs("storage")
         
 logger.info('''
     _ __  __ _      ___     _           
