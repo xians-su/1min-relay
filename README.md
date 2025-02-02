@@ -3,6 +3,9 @@ Relay 1min AI API to OpenAI Structure in 1 minute.
 
 Don't forget to star this repository if you like it! 
 
+Oh and by the way, join our discord server for support and updates!
+[https://discord.gg/GQd3DrxXyj](https://discord.gg/GQd3DrxXyj)
+
 ## Features
 - **bolt.diy Support**: Compatible with bolt.diy for seamless integration.
 - **Conversation History**: Retain and manage conversation history effortlessly.
