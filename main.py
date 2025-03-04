@@ -269,6 +269,7 @@ def conversation():
     # Check if user_input is a list and combine text if necessary
     image = False
     if isinstance(user_input, list):
+        image_paths = []
         for item in user_input:
             if 'text' in item:
                 combined_text = '\n'.join(item['text'])
@@ -289,6 +290,7 @@ def conversation():
                     asset = requests.post(ONE_MIN_ASSET_URL, files=files, headers=headers)
                     asset.raise_for_status()  # Raise an error for bad responses
                     image_path = asset.json()['fileContent']['path']
+                    image_paths.append(image_path)
                     image = True
             except Exception as e:
                 print(f"An error occurred e:" + str(e)[:60])
@@ -319,7 +321,7 @@ def conversation():
             "promptObject": {
                 "prompt": all_messages,
                 "isMixed": False,
-                "imageList": [image_path]
+                "imageList": image_paths
             }
         }
     
