@@ -103,6 +103,7 @@ ONE_MIN_ASSET_URL = "https://api.1min.ai/api/assets"
 # Define the models that are available for use
 ALL_ONE_MIN_AVAILABLE_MODELS = [
     "deepseek-chat",
+    "deepseek-reasoner",
     "o1-preview",
     "o1-mini",
     "gpt-4o-mini",
@@ -112,6 +113,7 @@ ALL_ONE_MIN_AVAILABLE_MODELS = [
     "gpt-3.5-turbo",
     "claude-instant-1.2",
     "claude-2.1",
+    "claude-3-7-sonnet-20250219",
     "claude-3-5-sonnet-20240620",
     "claude-3-opus-20240229",
     "claude-3-sonnet-20240229",
