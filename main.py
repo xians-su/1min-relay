@@ -102,6 +102,7 @@ ONE_MIN_ASSET_URL = "https://api.1min.ai/api/assets"
 
 # Define the models that are available for use
 ALL_ONE_MIN_AVAILABLE_MODELS = [
+    "o3-mini",
     "deepseek-chat",
     "deepseek-reasoner",
     "o1-preview",
@@ -138,6 +139,25 @@ vision_supported_models = [
     "gpt-4o",
     "gpt-4o-mini",
     "gpt-4-turbo"
+]
+
+# Define the models that support image generation
+image_generation_models = [
+    "stable-image",
+    "stable-diffusion-xl-1024-v1-0",
+    "stable-diffusion-v1-6",
+    "esrgan-v1-x2plus",
+    "clipdrop",
+    "midjourney",
+    "midjourney_6_1",
+    # Learnardo
+    "6b645e3a-d64f-4341-a6d8-7a3690fbf042" # LEONARDO_PHOENIX
+    "b24e16ff-06e3-43eb-8d33-4416c2d75876" # LEONARDO_LIGHTNING_XL
+    "e71a1c2f-4f80-4800-934f-2c68979d8cc8" # LEONARDO_ANIME_XL
+    "1e60896f-3c26-4296-8ecc-53e2afecc132" # LEONARDO_DIFFUSION_XL
+    "aa77f04e-3eec-4034-9c07-d0f619684628" # LEONARDO_KINO_XL
+    "2067ae52-33fd-4a82-bb92-c2c55e7d2786" # LEONARDO_ALBEDO_BASE_XL
+    "black-forest-labs/flux-schnell",
 ]
 
 
@@ -352,6 +372,63 @@ def conversation():
             logger.error(f"An unknown error occurred while processing the user's request. Error code: {response_stream.status_code}")
             return ERROR_HANDLER(response_stream.status_code)
         return Response(stream_response(response_stream, request_data, request_data.get('model', 'mistral-nemo'), int(prompt_token)), content_type='text/event-stream')
+
+@app.route('/v1/images/generations', methods=['POST', 'OPTIONS'])
+@limiter.limit("100 per minute")
+def generate_images():
+    if request.method == 'OPTIONS':
+        return handle_options_request()
+
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith("Bearer "):
+        logger.error("Invalid Authentication")
+        return ERROR_HANDLER(1021)
+
+    api_key = auth_header.split(" ")[1]
+    headers = {
+        'API-KEY': api_key,
+        'Content-Type': 'application/json'
+    }
+
+    request_data = request.json
+    prompt = request_data.get('prompt')
+    if not prompt:
+        return ERROR_HANDLER(1412)  # No prompt provided
+
+    num_images = request_data.get('n', 1)
+    image_size = request_data.get('size', "1024x1024")
+    model = request_data.get('model', 'black-forest-labs/flux-schnell')
+    if not model in image_generation_models:
+        return ERROR_HANDLER(1044, model)
+
+    payload = {
+        "type": "IMAGE_GENERATOR",
+        "model": model,
+        "promptObject": {
+            "prompt": prompt,
+            "n": num_images,
+            "size": image_size
+        }
+    }
+
+    try:
+        logger.debug("Image Generation Requested.")
+        response = requests.post(ONE_MIN_API_URL + "?isStreaming=false", json=payload, headers=headers)
+        response.raise_for_status()
+        one_min_response = response.json()
+
+        image_urls = one_min_response['aiRecord']['aiRecordDetail']['resultObject']
+        transformed_response = {
+            "created": int(time.time()),
+            "data": [{"url": url} for url in image_urls]
+        }
+
+        return jsonify(transformed_response), 200
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Image generation failed: {str(e)}")
+        return ERROR_HANDLER(1044)  # Handle image generation error
+
 def handle_options_request():
     response = make_response()
     response.headers.add('Access-Control-Allow-Origin', '*')
@@ -455,3 +532,4 @@ If does not work, try:
 {internal_ip}:5001/v1/chat/completions
 {printedcolors.Color.reset}""")
     serve(app, host='0.0.0.0', port=5001, threads=6) # Thread has a default of 4 if not specified. We use 6 to increase performance and allow multiple requests at once.
+
