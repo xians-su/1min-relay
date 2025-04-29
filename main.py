@@ -182,8 +182,6 @@ AVAILABLE_MODELS.extend(SUBSET_OF_ONE_MIN_PERMITTED_MODELS)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    if request.method == 'POST':
-        return ERROR_HANDLER(1212)
     if request.method == 'GET':
         internal_ip = socket.gethostbyname(socket.gethostname())
         return "Congratulations! Your API is working! You can now make requests to the API.\n\nEndpoint: " + internal_ip + ':5001/v1'
