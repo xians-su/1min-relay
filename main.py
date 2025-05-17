@@ -185,7 +185,7 @@ def index():
     if request.method == 'GET':
         internal_ip = socket.gethostbyname(socket.gethostname())
         return "Congratulations! Your API is working! You can now make requests to the API.\n\nEndpoint: " + internal_ip + ':5001/v1'
-    return ERROR_HANDLER(1212)  # Default return for any other methods
+    return ERROR_HANDLER(1405)  # Default return for any other methods
 @app.route('/v1/models')
 @limiter.limit("500 per minute")
 def models():
@@ -219,6 +219,7 @@ def ERROR_HANDLER(code, model=None, key=None):
         1044: {"message": f"This model does not support image inputs.", "type": "invalid_request_error", "param": None, "code": "model_not_supported", "http_code": 400},
         1412: {"message": f"No message provided.", "type": "invalid_request_error", "param": "messages", "code": "invalid_request_error", "http_code": 400},
         1423: {"message": f"No content in last message.", "type": "invalid_request_error", "param": "messages", "code": "invalid_request_error", "http_code": 400},
+        1405: {"message": "Method Not Allowed", "type": "invalid_request_error", "param": None, "code": None, "http_code": 405},
     }
     error_data = {k: v for k, v in error_codes.get(code, {"message": "Unknown error", "type": "unknown_error", "param": None, "code": None}).items() if k != "http_code"} # Remove http_code from the error data
     logger.error(f"An error has occurred while processing the user's request. Error code: {code}")
