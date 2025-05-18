@@ -173,3 +173,6 @@ docker start 1min-relay-container
 ### Environment Variables
 - `SUBSET_OF_ONE_MIN_PERMITTED_MODELS`: Specifies a subset of 1min.ai models to expose. Default: mistral-nemo,gpt-4o,deepseek-chat.
 - `PERMIT_MODELS_FROM_SUBSET_ONLY`: Restricts model usage to the specified subset. Set to True to enforce this restriction or False to allow all models supported by 1min.ai. Default: False.
+
+### Support
+Please consider supporting us by donating at https://donate.stripe.com/00w4gB1NbdI60afcKPgMw00 or contributing.
