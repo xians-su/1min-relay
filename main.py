@@ -126,6 +126,10 @@ ALL_ONE_MIN_AVAILABLE_MODELS = [
     "mistral-small-latest",
     "mistral-nemo",
     "open-mistral-7b",
+    "gpt-o1-pro",
+    "gpt-o4-mini",
+    "gpt-4.1-nano",
+    "gpt-4.1-mini",
 
    # Replicate
    "meta/llama-2-70b-chat", 
