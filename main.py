@@ -468,7 +468,7 @@ def transform_response(one_min_response, request_data, prompt_token):
     
 def set_response_headers(response):
     response.headers['Content-Type'] = 'application/json'
-    response.headers['Access -Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Origin'] = '*'
     response.headers['X-Request-ID'] = str (uuid.uuid4())
 
 def stream_response(response, request_data, model, prompt_tokens):
