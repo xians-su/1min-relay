@@ -6,7 +6,7 @@ Don't forget to star this repository if you like it!
 Oh and by the way, join our discord server for support and updates!
 [https://discord.gg/GQd3DrxXyj](https://discord.gg/GQd3DrxXyj)
 
-Please support us by donating at https://donate.stripe.com/00w4gB1NbdI60afcKPgMw00
+Please support us by donating at https://donate.stripe.com/00w4gB1NbdI60afcKPgMw00 or purchasing the paid version (hosted) at https://shop.kokodev.cc/product/7
 
 ## Features
 - **bolt.diy Support**: Compatible with bolt.diy for seamless integration.
