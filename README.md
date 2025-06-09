@@ -6,7 +6,7 @@ Don't forget to star this repository if you like it!
 Oh and by the way, join our discord server for support and updates!
 [https://discord.gg/GQd3DrxXyj](https://discord.gg/GQd3DrxXyj)
 
-Please support us by donating at https://donate.stripe.com/00w4gB1NbdI60afcKPgMw00 or purchasing the paid version (hosted) at https://shop.kokodev.cc/product/7
+Please support us by donating at https://donate.stripe.com/00w4gB1NbdI60afcKPgMw00 or purchasing the paid version (hosted) at https://shop.kokodev.cc/product/7 AND, by purchasing the paid version, you get many perks too! Check below for perks!
 
 ## Features
 - **bolt.diy Support**: Compatible with bolt.diy for seamless integration.
@@ -22,6 +22,12 @@ Please support us by donating at https://donate.stripe.com/00w4gB1NbdI60afcKPgMw
 - **Image Support**: Supports image uploads for enhanced functionality.
 - **ARM64 and AMD64 Support**: Compatible with both ARM64 and AMD64 architectures.
 - **Multiple Requests**: Supports multiple requests simultaneously.
+
+## Paid Perks
+- **Hosted**: Hosted for you, accessible anytime, anywhere.
+- **Latest Features**: Get access to latest features such as image generations that are not yet available in the public version.
+- **Priority Bug Fix**: Get the most common bug fixed quickly
+- **Priority Support**: Get support quicker than public version!
 
 
 ## Installation:
