@@ -102,6 +102,9 @@ ONE_MIN_ASSET_URL = "https://api.1min.ai/api/assets"
 
 # Define the models that are available for use
 ALL_ONE_MIN_AVAILABLE_MODELS = [
+    "gpt-5-nano",
+    "gpt-5",
+    "gpt-5-mini",
     "o3-mini",
     "deepseek-chat",
     "deepseek-reasoner",
