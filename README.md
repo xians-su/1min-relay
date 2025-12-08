@@ -9,7 +9,7 @@ https://www.kokodev.cc/1minrelay
 Oh and by the way, join our discord server for support and updates!
 [https://discord.gg/GQd3DrxXyj](https://discord.gg/GQd3DrxXyj)
 
-Please support us by donating at https://donate.stripe.com/00w4gB1NbdI60afcKPgMw00 or purchasing the paid version (hosted) at https://shop.kokodev.cc/product/7 AND, by purchasing the paid version, you get many perks too! Check below for perks!
+Please support us by donating at https://donate.stripe.com/00w4gB1NbdI60afcKPgMw00 or purchasing the paid version (hosted) at https://shop.kokodev.cc/products AND, by purchasing the paid version, you get many perks too! Check below for perks!
 
 ## Features
 - **bolt.diy Support**: Compatible with bolt.diy for seamless integration.
