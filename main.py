@@ -475,12 +475,27 @@ def handle_1min_error(response):
     return ERROR_HANDLER(response.status_code)
 
 def stream_response(response, request_data, model, prompt_tokens):
-    all_chunks = ""
+    """
+    Stream and normalize SSE response into OpenAI-compatible chunks.
+    """
+
+    chunks = []
     current_event = None
-    for line in response.iter_lines(decode_unicode=True):
-        if line is None:
+
+    stream_id = f"chatcmpl-{uuid.uuid4()}"
+
+    for raw_line in response.iter_lines(decode_unicode=False):
+        if raw_line == b"":
+            current_event = None
             continue
 
+        try:
+            line = raw_line.decode("utf-8")
+        except UnicodeDecodeError:
+            logger.warning("Invalid UTF-8 in upstream stream; replacing undecodable bytes")
+            line = raw_line.decode("utf-8", errors="replace")
+
+        # Parse SSE event
         if line.startswith("event:"):
             current_event = line.split(":", 1)[1].strip()
             continue
@@ -490,63 +505,79 @@ def stream_response(response, request_data, model, prompt_tokens):
 
         data = line.split(":", 1)[1].strip()
 
-        if current_event == "content":
+        if data == "[DONE]":
+            break
+
+        event = current_event or "content"
+
+        if event == "content":
             try:
-                content = json.loads(data).get("content", "")
+                parsed = json.loads(data)
+                if isinstance(parsed, dict):
+                    content = (
+                        parsed.get("content")
+                        or parsed.get("delta", {}).get("content")
+                        or ""
+                    )
+                else:
+                    content = ""
             except json.JSONDecodeError:
                 content = data
 
             if not content:
                 continue
 
-            return_chunk = {
-                "id": f"chatcmpl-{uuid.uuid4()}",
+            chunks.append(content)
+
+            chunk = {
+                "id": stream_id,
                 "object": "chat.completion.chunk",
                 "created": int(time.time()),
-                "model": request_data.get('model', 'mistral-nemo'),
+                "model": request_data.get("model", model),
                 "choices": [
                     {
                         "index": 0,
-                        "delta": {
-                            "content": content
-                        },
+                        "delta": {"content": content},
                         "finish_reason": None
                     }
                 ]
             }
-            all_chunks += content
-            yield f"data: {json.dumps(return_chunk)}\n\n"
-        elif current_event == "error":
-            logger.error("Streaming error from 1min.ai: %s", data)
-        elif current_event == "done":
+
+            yield "data: " + json.dumps(chunk, ensure_ascii=False) + "\n\n"
+
+        elif event == "error":
+            logger.error("Streaming error from upstream: %s", data)
+
+        elif event == "done":
             break
-        
-    tokens = calculate_token(all_chunks)
-    logger.debug(f"Finished processing streaming response. Completion tokens: {str(tokens)}")
-    logger.debug(f"Total tokens: {str(tokens + prompt_tokens)}")
-        
-    # Final chunk when iteration stops
+
+    # Final assembly
+    full_text = "".join(chunks)
+    completion_tokens = calculate_token(full_text)
+
+    logger.debug(f"completion_tokens={completion_tokens}")
+    logger.debug(f"total_tokens={completion_tokens + prompt_tokens}")
+
     final_chunk = {
-        "id": f"chatcmpl-{uuid.uuid4()}",
+        "id": stream_id,
         "object": "chat.completion.chunk",
         "created": int(time.time()),
-        "model": request_data.get('model', 'mistral-nemo'),
+        "model": request_data.get("model", model),
         "choices": [
             {
                 "index": 0,
-                "delta": {
-                    "content": ""    
-                },
+                "delta": {},
                 "finish_reason": "stop"
             }
         ],
         "usage": {
             "prompt_tokens": prompt_tokens,
-            "completion_tokens": tokens,
-            "total_tokens": tokens + prompt_tokens
+            "completion_tokens": completion_tokens,
+            "total_tokens": completion_tokens + prompt_tokens
         }
     }
-    yield f"data: {json.dumps(final_chunk)}\n\n"
+
+    yield "data: " + json.dumps(final_chunk, ensure_ascii=False) + "\n\n"
     yield "data: [DONE]\n\n"
 
 if __name__ == '__main__':
