@@ -467,12 +467,33 @@ def set_response_headers(response):
 def handle_1min_error(response):
     if response.status_code == 401:
         return ERROR_HANDLER(1020)
+    
+    # Try to extract a meaningful error message from 1min.ai's response
+    try:
+        error_json = response.json()
+        upstream_detail = (
+            error_json.get("message")
+            or error_json.get("error")
+            or error_json.get("detail")
+            or response.text[:500]
+        )
+    except (ValueError, AttributeError):
+        upstream_detail = response.text[:500] if response.text else "No response body"
+
     logger.error(
         "1min.ai request failed with status %s: %s",
         response.status_code,
-        response.text[:500]
+        upstream_detail
     )
-    return ERROR_HANDLER(response.status_code)
+
+    # Return a structured error that includes the upstream message
+    error_data = {
+        "message": f"1min.ai API error ({response.status_code}): {upstream_detail}",
+        "type": "upstream_error",
+        "param": None,
+        "code": f"upstream_{response.status_code}",
+    }
+    return jsonify({"error": error_data}), response.status_code
 
 def stream_response(response, request_data, model, prompt_tokens):
     """
