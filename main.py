@@ -170,19 +170,18 @@ image_generation_models = [
 
 
 # Default values
-SUBSET_OF_ONE_MIN_PERMITTED_MODELS = ["mistral-nemo", "gpt-4o", "deepseek-chat"]
-PERMIT_MODELS_FROM_SUBSET_ONLY = False
+SUBSET_OF_ONE_MIN_PERMITTED_MODELS = os.getenv(
+    "SUBSET_OF_ONE_MIN_PERMITTED_MODELS",
+    "mistral-nemo,gpt-4o,deepseek-chat"
+).split(",")
 
-# Read environment variables
-one_min_models_env = os.getenv("SUBSET_OF_ONE_MIN_PERMITTED_MODELS")  # e.g. "mistral-nemo,gpt-4o,deepseek-chat"
-permit_not_in_available_env = os.getenv("PERMIT_MODELS_FROM_SUBSET_ONLY")  # e.g. "True" or "False"
+PERMIT_MODELS_FROM_SUBSET_ONLY = os.getenv(
+    "PERMIT_MODELS_FROM_SUBSET_ONLY",
+    "False"
+).lower() == "true"
 
-# Parse or fall back to defaults
-if one_min_models_env:
-    SUBSET_OF_ONE_MIN_PERMITTED_MODELS = one_min_models_env.split(",")
-
-if permit_not_in_available_env and permit_not_in_available_env.lower() == "true":
-    PERMIT_MODELS_FROM_SUBSET_ONLY = True
+PORT = int(os.getenv("PORT", 5001))
+HOST = os.getenv("HOST", "0.0.0.0")
 
 # Combine into a single list
 AVAILABLE_MODELS = []
@@ -607,11 +606,11 @@ if __name__ == '__main__':
     public_ip = response.text
     logger.info(f"""{printedcolors.Color.fg.lightcyan}  
 Server is ready to serve at:
-Internal IP: {internal_ip}:5001
+Internal IP: {internal_ip}:{PORT}
 Public IP: {public_ip} (only if you've setup port forwarding on your router.)
 Enter this url to OpenAI clients supporting custom endpoint:
-{internal_ip}:5001/v1
+{internal_ip}:{PORT}/v1
 If does not work, try:
-{internal_ip}:5001/v1/chat/completions
+{internal_ip}:{PORT}/v1/chat/completions
 {printedcolors.Color.reset}""")
-    serve(app, host='0.0.0.0', port=5001, threads=6) # Thread has a default of 4 if not specified. We use 6 to increase performance and allow multiple requests at once.
+    serve(app, host=HOST, port=PORT, threads=6) # Thread has a default of 4 if not specified. We use 6 to increase performance and allow multiple requests at once.
