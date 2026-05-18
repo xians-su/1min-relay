@@ -61,6 +61,8 @@ Pre-built images
 Environment variables
 - SUBSET_OF_ONE_MIN_PERMITTED_MODELS: Subset of 1min.ai models to expose. Default: mistral-nemo,gpt-4o,deepseek-chat.
 - PERMIT_MODELS_FROM_SUBSET_ONLY: Restrict model usage to the specified subset. Set to True to enforce, False to allow all models supported by 1min.ai. Default: True.
+- HOST: Host to expose HTTP server at. Default: '0.0.0.0'
+- PORT: Port to expose HTTP server at. Default: 5001
 
 Self-build (Docker image from source)
 1) Build the Docker image:
