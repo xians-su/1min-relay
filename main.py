@@ -1,108 +1,55 @@
-from flask import Flask, request, jsonify, make_response, Response
-import requests
+import base64
+import json
+import logging
+import os
+import socket
 import time
 import uuid
 import warnings
-from waitress import serve
-import json
+from io import BytesIO
+
+import coloredlogs
+import requests
 import tiktoken
-import socket
-from mistral_common.tokens.tokenizers.mistral import MistralTokenizer
-from mistral_common.protocol.instruct.messages import UserMessage
-from mistral_common.protocol.instruct.request import ChatCompletionRequest
-from pymemcache.client.base import Client
+from flask import Flask, Response, jsonify, make_response, request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-import os
-import logging
-from io import BytesIO
-import coloredlogs
-import printedcolors
-import base64
+from pymemcache.client.base import Client
+from waitress import serve
 
-# Suppress warnings from flask_limiter
+from mistral_common.protocol.instruct.messages import UserMessage
+from mistral_common.protocol.instruct.request import ChatCompletionRequest
+from mistral_common.tokens.tokenizers.mistral import MistralTokenizer
+
+try:
+    import printedcolors
+except Exception:
+    class _Color:
+        class fg:
+            lightcyan = ""
+        reset = ""
+    printedcolors = type("printedcolors", (), {"Color": _Color})()
+
 warnings.filterwarnings("ignore", category=UserWarning, module="flask_limiter.extension")
 
-# Create a logger object
-logger = logging.getLogger("1min-relay")
+logger = logging.getLogger("relay")
+coloredlogs.install(level=os.getenv("LOG_LEVEL", "INFO"), logger=logger)
 
-# Install coloredlogs with desired log level
-coloredlogs.install(level='DEBUG', logger=logger)
+APP_NAME = os.getenv("APP_NAME", "relay")
+PORT = int(os.getenv("PORT", os.getenv("APP_PORT", 5001)))
+HOST = os.getenv("HOST", os.getenv("APP_HOST", "0.0.0.0"))
 
-def check_memcached_connection(host='memcached', port=11211):
-    try:
-        client = Client((host, port))
-        client.set('test_key', 'test_value')
-        if client.get('test_key') == b'test_value':
-            client.delete('test_key')  # Clean up
-            return True
-        else:
-            return False
-    except:
-        return False
-        
-logger.info('''
-    _ __  __ _      ___     _           
- / |  \/  (_)_ _ | _ \___| |__ _ _  _ 
- | | |\/| | | ' \|   / -_) / _` | || |
- |_|_|  |_|_|_||_|_|_\___|_\__,_|\_, |
-                                 |__/ ''')
+API_BASE = os.getenv("ONE_MIN_API_BASE", "https://api.1min.ai/api")
+CHAT_URL = os.getenv("ONE_MIN_CHAT_API_URL", f"{API_BASE}/chat-with-ai")
+FEATURES_URL = os.getenv("ONE_MIN_API_URL", f"{API_BASE}/features")
+CONV_URL = os.getenv("ONE_MIN_CONVERSATION_API_URL", f"{API_BASE}/conversations")
+STREAM_URL = os.getenv(
+    "ONE_MIN_CONVERSATION_API_STREAMING_URL",
+    f"{API_BASE}/chat-with-ai?isStreaming=true",
+)
+ASSET_URL = os.getenv("ONE_MIN_ASSET_URL", f"{API_BASE}/assets")
 
-
-def calculate_token(sentence, model="DEFAULT"):
-    """Calculate the number of tokens in a sentence based on the specified model."""
-    
-    if model.startswith("mistral"):
-        # Initialize the Mistral tokenizer
-        tokenizer = MistralTokenizer.v3(is_tekken=True)
-        model_name = "open-mistral-nemo" # Default to Mistral Nemo
-        tokenizer = MistralTokenizer.from_model(model_name)
-        tokenized = tokenizer.encode_chat_completion(
-            ChatCompletionRequest(
-                messages=[
-                    UserMessage(content=sentence),
-                ],
-                model=model_name,
-            )
-        )
-        tokens = tokenized.tokens
-        return len(tokens)
-
-    elif model in ["gpt-3.5-turbo", "gpt-4"]:
-        # Use OpenAI's tiktoken for GPT models
-        encoding = tiktoken.encoding_for_model(model)
-        tokens = encoding.encode(sentence)
-        return len(tokens)
-
-    else:
-        # Default to openai
-        encoding = tiktoken.encoding_for_model("gpt-4")
-        tokens = encoding.encode(sentence)
-        return len(tokens)
-app = Flask(__name__)
-if check_memcached_connection():
-    limiter = Limiter(
-        get_remote_address,
-        app=app,
-        storage_uri="memcached://memcached:11211",  # Connect to Memcached created with docker
-    )
-else:
-    # Used for ratelimiting without memcached
-    limiter = Limiter(
-        get_remote_address,
-        app=app,
-    )
-    logger.warning("Memcached is not available. Using in-memory storage for rate limiting. Not-Recommended")
-
-
-ONE_MIN_API_URL = "https://api.1min.ai/api/features"
-ONE_MIN_CHAT_API_URL = "https://api.1min.ai/api/chat-with-ai"
-ONE_MIN_CONVERSATION_API_URL = "https://api.1min.ai/api/conversations"
-ONE_MIN_CONVERSATION_API_STREAMING_URL = "https://api.1min.ai/api/chat-with-ai?isStreaming=true"
-ONE_MIN_ASSET_URL = "https://api.1min.ai/api/assets"
-
-# Define the models that are available for use
-ALL_ONE_MIN_AVAILABLE_MODELS = [
+OLD_MODEL_LIST = [
     "gpt-5-nano",
     "gpt-5",
     "gpt-5-mini",
@@ -134,23 +81,15 @@ ALL_ONE_MIN_AVAILABLE_MODELS = [
     "gpt-o4-mini",
     "gpt-4.1-nano",
     "gpt-4.1-mini",
-
-   # Replicate
-   "meta/llama-2-70b-chat", 
-   "meta/meta-llama-3-70b-instruct", 
-   "meta/meta-llama-3.1-405b-instruct", 
-   "command"
+    "meta/llama-2-70b-chat",
+    "meta/meta-llama-3-70b-instruct",
+    "meta/meta-llama-3.1-405b-instruct",
+    "command",
 ]
 
-# Define the models that support vision inputs
-vision_supported_models = [
-    "gpt-4o",
-    "gpt-4o-mini",
-    "gpt-4-turbo"
-]
+VISION_MODELS = {"gpt-4o", "gpt-4o-mini", "gpt-4-turbo"}
 
-# Define the models that support image generation
-image_generation_models = [
+IMAGE_MODELS = {
     "stable-image",
     "stable-diffusion-xl-1024-v1-0",
     "stable-diffusion-v1-6",
@@ -158,459 +97,392 @@ image_generation_models = [
     "clipdrop",
     "midjourney",
     "midjourney_6_1",
-    # Learnardo
-    "6b645e3a-d64f-4341-a6d8-7a3690fbf042" # LEONARDO_PHOENIX
-    "b24e16ff-06e3-43eb-8d33-4416c2d75876" # LEONARDO_LIGHTNING_XL
-    "e71a1c2f-4f80-4800-934f-2c68979d8cc8" # LEONARDO_ANIME_XL
-    "1e60896f-3c26-4296-8ecc-53e2afecc132" # LEONARDO_DIFFUSION_XL
-    "aa77f04e-3eec-4034-9c07-d0f619684628" # LEONARDO_KINO_XL
-    "2067ae52-33fd-4a82-bb92-c2c55e7d2786" # LEONARDO_ALBEDO_BASE_XL
+    "6b645e3a-d64f-4341-a6d8-7a3690fbf042",
+    "b24e16ff-06e3-43eb-8d33-4416c2d75876",
+    "e71a1c2f-4f80-4800-934f-2c68979d8cc8",
+    "1e60896f-3c26-4296-8ecc-53e2afecc132",
+    "aa77f04e-3eec-4034-9c07-d0f619684628",
+    "2067ae52-33fd-4a82-bb92-c2c55e7d2786",
     "black-forest-labs/flux-schnell",
+}
+
+MODEL_SUBSET = [
+    m.strip()
+    for m in os.getenv("SUBSET_OF_ONE_MIN_PERMITTED_MODELS", "mistral-nemo,gpt-4o,deepseek-chat").split(",")
+    if m.strip()
 ]
+STRICT_MODELS = os.getenv("PERMIT_MODELS_FROM_SUBSET_ONLY", "false").lower() == "true"
+MODELS = MODEL_SUBSET if STRICT_MODELS else OLD_MODEL_LIST
+
+MEM_HOST = os.getenv("MEMCACHED_HOST", os.getenv("MEM_HOST", "memcached"))
+MEM_PORT = int(os.getenv("MEMCACHED_PORT", os.getenv("MEM_PORT", 11211)))
+
+app = Flask(__name__)
 
 
-# Default values
-SUBSET_OF_ONE_MIN_PERMITTED_MODELS = os.getenv(
-    "SUBSET_OF_ONE_MIN_PERMITTED_MODELS",
-    "mistral-nemo,gpt-4o,deepseek-chat"
-).split(",")
+def memcached_ok(host: str = MEM_HOST, port: int = MEM_PORT) -> bool:
+    try:
+        c = Client((host, port))
+        c.set("relay_test", b"1")
+        ok = c.get("relay_test") == b"1"
+        c.delete("relay_test")
+        return ok
+    except Exception:
+        return False
 
-PERMIT_MODELS_FROM_SUBSET_ONLY = os.getenv(
-    "PERMIT_MODELS_FROM_SUBSET_ONLY",
-    "False"
-).lower() == "true"
 
-PORT = int(os.getenv("PORT", 5001))
-HOST = os.getenv("HOST", "0.0.0.0")
+if memcached_ok():
+    limiter = Limiter(get_remote_address, app=app, storage_uri=f"memcached://{MEM_HOST}:{MEM_PORT}")
+else:
+    limiter = Limiter(get_remote_address, app=app)
+    logger.warning("Memcached unavailable; using in-memory rate limiting.")
 
-# Combine into a single list
-AVAILABLE_MODELS = []
-AVAILABLE_MODELS.extend(SUBSET_OF_ONE_MIN_PERMITTED_MODELS)
 
-@app.route('/', methods=['GET', 'POST'])
+def token_count(text: str, model: str = "gpt-4") -> int:
+    try:
+        if model.startswith("mistral"):
+            tok = MistralTokenizer.from_model("open-mistral-nemo")
+            req = ChatCompletionRequest(messages=[UserMessage(content=text)], model="open-mistral-nemo")
+            return len(tok.encode_chat_completion(req).tokens)
+        enc = tiktoken.encoding_for_model(model if model in {"gpt-3.5-turbo", "gpt-4"} else "gpt-4")
+        return len(enc.encode(text))
+    except Exception:
+        return len(text.split())
+
+
+def error(code: int, model: str | None = None, key: str | None = None):
+    mapping = {
+        1002: ("The model does not exist.", "invalid_request_error", "model_not_found", 400),
+        1020: (f"Incorrect API key provided: {key}.", "authentication_error", "invalid_api_key", 401),
+        1021: ("Invalid Authentication", "invalid_request_error", None, 401),
+        1212: ("Incorrect Endpoint. Please use the /v1/chat/completions endpoint.", "invalid_request_error", "model_not_supported", 400),
+        1044: ("This model does not support image inputs.", "invalid_request_error", "model_not_supported", 400),
+        1412: ("No message provided.", "invalid_request_error", "invalid_request_error", 400),
+        1423: ("No content in last message.", "invalid_request_error", "invalid_request_error", 400),
+        1405: ("Method Not Allowed", "invalid_request_error", None, 405),
+    }
+    msg, typ, err_code, http = mapping.get(code, ("Unknown error", "unknown_error", None, 400))
+    if model:
+        msg = msg.replace("does not exist.", f"does not exist: {model}.")
+    payload = {"error": {"message": msg, "type": typ, "param": None, "code": err_code}}
+    return jsonify(payload), http
+
+
+def cors():
+    resp = make_response()
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
+    resp.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+    return resp, 204
+
+
+def get_api_key():
+    h = request.headers.get("Authorization", "")
+    if not h.startswith("Bearer "):
+        return None
+    return h.split(" ", 1)[1].strip() or None
+
+
+def normalize_text(content):
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, dict):
+                if "text" in item:
+                    txt = item["text"]
+                    parts.append("".join(txt) if isinstance(txt, list) else str(txt))
+        return "\n".join(parts).strip()
+    return str(content).strip() if content is not None else ""
+
+
+def build_prompt(messages, new_input=""):
+    lines = ["Conversation History:\n"]
+    for msg in messages:
+        role = str(msg.get("role", "")).capitalize()
+        content = normalize_text(msg.get("content", ""))
+        lines.append(f"{role}: {content}")
+    if messages:
+        lines.append("Respond like normal. Do not add role labels.")
+        lines.append("User Message:\n")
+    lines.append(new_input)
+    return "\n".join(lines)
+
+
+def upstream_error(resp):
+    if resp.status_code == 401:
+        return error(1020)
+    try:
+        j = resp.json()
+        detail = j.get("message") or j.get("error") or j.get("detail") or resp.text[:500]
+    except Exception:
+        detail = resp.text[:500] if getattr(resp, "text", None) else "No response body"
+    payload = {
+        "error": {
+            "message": f"1min.ai API error ({resp.status_code}): {detail}",
+            "type": "upstream_error",
+            "param": None,
+            "code": f"upstream_{resp.status_code}",
+        }
+    }
+    return jsonify(payload), resp.status_code
+
+
+def set_headers(resp):
+    resp.headers["Content-Type"] = "application/json"
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["X-Request-ID"] = str(uuid.uuid4())
+
+
+def upload_image(url: str, headers: dict) -> str:
+    if url.startswith("data:image/png;base64,"):
+        data = base64.b64decode(url.split(",", 1)[1])
+        fileobj = BytesIO(data)
+    else:
+        r = requests.get(url, timeout=60)
+        r.raise_for_status()
+        fileobj = BytesIO(r.content)
+    files = {"asset": (f"relay-{uuid.uuid4()}", fileobj, "image/png")}
+    r = requests.post(ASSET_URL, files=files, headers=headers, timeout=60)
+    r.raise_for_status()
+    return r.json()["fileContent"]["path"]
+
+
+def transform_chat(resp_json, model: str, prompt_tokens: int):
+    text = resp_json["aiRecord"]["aiRecordDetail"]["resultObject"][0]
+    comp_tokens = token_count(text, model)
+    return {
+        "id": f"chatcmpl-{uuid.uuid4()}",
+        "object": "chat.completion",
+        "created": int(time.time()),
+        "model": model,
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": text},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": comp_tokens,
+            "total_tokens": prompt_tokens + comp_tokens,
+        },
+    }
+
+
+def stream_chat(resp, model: str, prompt_tokens: int):
+    stream_id = f"chatcmpl-{uuid.uuid4()}"
+    chunks = []
+
+    for raw in resp.iter_lines(decode_unicode=False):
+        if raw == b"":
+            continue
+        try:
+            line = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            line = raw.decode("utf-8", errors="replace")
+
+        if not line.startswith("data:"):
+            continue
+
+        data = line.split(":", 1)[1].strip()
+        if data == "[DONE]":
+            break
+
+        try:
+            parsed = json.loads(data)
+            content = parsed.get("content") or parsed.get("delta", {}).get("content") or ""
+        except Exception:
+            content = data
+
+        if not content:
+            continue
+
+        chunks.append(content)
+        yield "data: " + json.dumps(
+            {
+                "id": stream_id,
+                "object": "chat.completion.chunk",
+                "created": int(time.time()),
+                "model": model,
+                "choices": [{"index": 0, "delta": {"content": content}, "finish_reason": None}],
+            },
+            ensure_ascii=False,
+        ) + "\n\n"
+
+    full_text = "".join(chunks)
+    comp_tokens = token_count(full_text, model)
+    yield "data: " + json.dumps(
+        {
+            "id": stream_id,
+            "object": "chat.completion.chunk",
+            "created": int(time.time()),
+            "model": model,
+            "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+            "usage": {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": comp_tokens,
+                "total_tokens": prompt_tokens + comp_tokens,
+            },
+        },
+        ensure_ascii=False,
+    ) + "\n\n"
+    yield "data: [DONE]\n\n"
+
+
+@app.route("/", methods=["GET", "POST"])
 def index():
-    if request.method == 'GET':
-        internal_ip = socket.gethostbyname(socket.gethostname())
-        return "Congratulations! Your API is working! You can now make requests to the API.\n\nEndpoint: " + internal_ip + ':5001/v1'
-    return ERROR_HANDLER(1405)  # Default return for any other methods
-@app.route('/v1/models')
+    if request.method == "GET":
+        ip = socket.gethostbyname(socket.gethostname())
+        return f"Congratulations! Your API is working!\n\nEndpoint: {ip}:{PORT}/v1"
+    return error(1405)
+
+
+@app.route("/v1/models", methods=["GET"])
 @limiter.limit("500 per minute")
 def models():
-    # Dynamically create the list of models with additional fields
-    models_data = []
-    if not PERMIT_MODELS_FROM_SUBSET_ONLY:
-        one_min_models_data = [
-            {
-                "id": model_name,
-                "object": "model",
-                "owned_by": "1minai",
-                "created": 1727389042
-            }
-            for model_name in ALL_ONE_MIN_AVAILABLE_MODELS
-        ]
-    else:
-        one_min_models_data = [
-            {"id": model_name, "object": "model", "owned_by": "1minai", "created": 1727389042}
-            for model_name in SUBSET_OF_ONE_MIN_PERMITTED_MODELS
-        ]
-    models_data.extend(one_min_models_data)
-    return jsonify({"data": models_data, "object": "list"})
-
-def ERROR_HANDLER(code, model=None, key=None):
-    # Handle errors in OpenAI-Structued Error
-    error_codes = { # Internal Error Codes
-        1002: {"message": f"The model {model} does not exist.", "type": "invalid_request_error", "param": None, "code": "model_not_found", "http_code": 400},
-        1020: {"message": f"Incorrect API key provided: {key}. You can find your API key at https://app.1min.ai/api.", "type": "authentication_error", "param": None, "code": "invalid_api_key", "http_code": 401},
-        1021: {"message": "Invalid Authentication", "type": "invalid_request_error", "param": None, "code": None, "http_code": 401},
-        1212: {"message": f"Incorrect Endpoint. Please use the /v1/chat/completions endpoint.", "type": "invalid_request_error", "param": None, "code": "model_not_supported", "http_code": 400},
-        1044: {"message": f"This model does not support image inputs.", "type": "invalid_request_error", "param": None, "code": "model_not_supported", "http_code": 400},
-        1412: {"message": f"No message provided.", "type": "invalid_request_error", "param": "messages", "code": "invalid_request_error", "http_code": 400},
-        1423: {"message": f"No content in last message.", "type": "invalid_request_error", "param": "messages", "code": "invalid_request_error", "http_code": 400},
-        1405: {"message": "Method Not Allowed", "type": "invalid_request_error", "param": None, "code": None, "http_code": 405},
-    }
-    error_data = {k: v for k, v in error_codes.get(code, {"message": "Unknown error", "type": "unknown_error", "param": None, "code": None}).items() if k != "http_code"} # Remove http_code from the error data
-    logger.error(f"An error has occurred while processing the user's request. Error code: {code}")
-    return jsonify({"error": error_data}), error_codes.get(code, {}).get("http_code", 400) # Return the error data without http_code inside the payload and get the http_code to return.
-
-def format_conversation_history(messages, new_input):
-    """
-    Formats the conversation history into a structured string.
-    
-    Args:
-        messages (list): List of message dictionaries from the request
-        new_input (str): The new user input message
-    
-    Returns:
-        str: Formatted conversation history
-    """
-    formatted_history = ["Conversation History:\n"]
-    
-    for message in messages:
-        role = message.get('role', '').capitalize()
-        content = message.get('content', '')
-        
-        # Handle potential list content
-        if isinstance(content, list):
-            content = '\n'.join(item['text'] for item in content if 'text' in item)
-        
-        formatted_history.append(f"{role}: {content}")
-    
-    # Append additional messages only if there are existing messages
-    if messages: # Save credits if it is the first message.
-        formatted_history.append("Respond like normal. The conversation history will be automatically updated on the next MESSAGE. DO NOT ADD User: or Assistant: to your output. Just respond like normal.")
-        formatted_history.append("User Message:\n")
-    formatted_history.append(new_input) 
-    
-    return '\n'.join(formatted_history)
+    data = [{"id": m, "object": "model", "owned_by": "1minai", "created": 1727389042} for m in MODELS]
+    return jsonify({"data": data, "object": "list"})
 
 
-@app.route('/v1/chat/completions', methods=['POST', 'OPTIONS'])
+@app.route("/v1/chat/completions", methods=["POST", "OPTIONS"])
 @limiter.limit("500 per minute")
-def conversation():
-    if request.method == 'OPTIONS':
-        return handle_options_request()
-    image = False
-    
+def chat():
+    if request.method == "OPTIONS":
+        return cors()
 
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith("Bearer "):
-        logger.error("Invalid Authentication")
-        return ERROR_HANDLER(1021)
-    
-    api_key = auth_header.split(" ")[1]
-    
-    headers = {
-        'API-KEY': api_key
-    }
-    
-    request_data = request.json
-    
-    all_messages = format_conversation_history(request_data.get('messages', []), request_data.get('new_input', ''))
+    api_key = get_api_key()
+    if not api_key:
+        return error(1021)
 
-    messages = request_data.get('messages', [])
+    data = request.get_json(silent=True) or {}
+    messages = data.get("messages") or []
     if not messages:
-        return ERROR_HANDLER(1412)
+        return error(1412)
 
-    user_input = messages[-1].get('content')
-    if not user_input:
-        return ERROR_HANDLER(1423)
+    last = messages[-1].get("content")
+    if not last:
+        return error(1423)
 
-    # Check if user_input is a list and combine text if necessary
-    image = False
-    if isinstance(user_input, list):
+    model = data.get("model", "mistral-nemo")
+    if STRICT_MODELS and model not in MODELS:
+        return error(1002, model)
+
+    headers = {"API-KEY": api_key, "Content-Type": "application/json"}
+    prompt = build_prompt(messages, data.get("new_input", ""))
+
+    attachments = None
+    content = messages[-1].get("content")
+    if isinstance(content, list):
+        if model not in VISION_MODELS:
+            return error(1044, model)
         image_paths = []
-        for item in user_input:
-            if 'text' in item:
-                combined_text = '\n'.join(item['text'])
-            try:
-                if 'image_url' in item:
-                    if request_data.get('model', 'mistral-nemo') not in vision_supported_models:
-                        return ERROR_HANDLER(1044, request_data.get('model', 'mistral-nemo'))
-                    if item['image_url']['url'].startswith("data:image/png;base64,"):
-                        base64_image = item['image_url']['url'].split(",")[1]
-                        binary_data = base64.b64decode(base64_image)
-                    else:
-                        binary_data = requests.get(item['image_url']['url'])
-                        binary_data.raise_for_status()  # Raise an error for bad responses
-                        binary_data = BytesIO(binary_data.content)
-                    files = {
-                        'asset': ("relay" + str(uuid.uuid4()), binary_data, 'image/png')
-                    }
-                    asset = requests.post(ONE_MIN_ASSET_URL, files=files, headers=headers)
-                    asset.raise_for_status()  # Raise an error for bad responses
-                    image_path = asset.json()['fileContent']['path']
-                    image_paths.append(image_path)
-                    image = True
-            except Exception as e:
-                print(f"An error occurred e:" + str(e)[:60])
-                # Optionally log the error or return an appropriate response
+        text_parts = []
+        for item in content:
+            if not isinstance(item, dict):
+                continue
+            if "text" in item:
+                txt = item["text"]
+                text_parts.append("".join(txt) if isinstance(txt, list) else str(txt))
+            if "image_url" in item:
+                try:
+                    image_paths.append(upload_image(item["image_url"]["url"], headers))
+                except Exception as e:
+                    logger.exception("image upload failed: %s", e)
+        if image_paths:
+            attachments = {"images": image_paths}
+        if text_parts:
+            prompt = build_prompt(messages[:-1] + [{"role": "user", "content": "\n".join(text_parts)}], data.get("new_input", ""))
 
-        user_input = str(combined_text)
-
-    prompt_token = calculate_token(str(all_messages))
-    if PERMIT_MODELS_FROM_SUBSET_ONLY and request_data.get('model', 'mistral-nemo') not in AVAILABLE_MODELS:
-        return ERROR_HANDLER(1002, request_data.get('model', 'mistral-nemo')) # Handle invalid model
-    
-    logger.debug(f"Proccessing {prompt_token} prompt tokens with model {request_data.get('model', 'mistral-nemo')}")
-
+    prompt_tokens = token_count(prompt, model)
     payload = {
         "type": "UNIFY_CHAT_WITH_AI",
-        "model": request_data.get('model', 'mistral-nemo'),
-        "promptObject": {
-            "prompt": all_messages,
-        }
+        "model": model,
+        "promptObject": {"prompt": prompt},
     }
-    if image:
-        payload["promptObject"]["attachments"] = {
-            "images": image_paths
-        }
-    
-    headers = {"API-KEY": api_key, 'Content-Type': 'application/json'}
+    if attachments:
+        payload["promptObject"]["attachments"] = attachments
 
-    if not request_data.get('stream', False):
-        # Non-Streaming Response
-        logger.debug("Non-Streaming AI Response")
-        response = requests.post(ONE_MIN_CHAT_API_URL, json=payload, headers=headers)
-        if response.status_code != 200:
-            return handle_1min_error(response)
-        one_min_response = response.json()
-        
-        transformed_response = transform_response(one_min_response, request_data, prompt_token)
-        response = make_response(jsonify(transformed_response))
-        set_response_headers(response)
-        
-        return response, 200
-    
-    else:
-        # Streaming Response
-        logger.debug("Streaming AI Response")
-        response_stream = requests.post(ONE_MIN_CONVERSATION_API_STREAMING_URL, data=json.dumps(payload), headers=headers, stream=True)
-        if response_stream.status_code != 200:
-            return handle_1min_error(response_stream)
-        return Response(stream_response(response_stream, request_data, request_data.get('model', 'mistral-nemo'), int(prompt_token)), content_type='text/event-stream')
+    if not data.get("stream", False):
+        r = requests.post(CHAT_URL, json=payload, headers=headers, timeout=120)
+        if r.status_code != 200:
+            return upstream_error(r)
+        out = transform_chat(r.json(), model, prompt_tokens)
+        resp = make_response(jsonify(out), 200)
+        set_headers(resp)
+        return resp
 
-@app.route('/v1/images/generations', methods=['POST', 'OPTIONS'])
+    r = requests.post(STREAM_URL, data=json.dumps(payload), headers=headers, stream=True, timeout=120)
+    if r.status_code != 200:
+        return upstream_error(r)
+    return Response(stream_chat(r, model, prompt_tokens), content_type="text/event-stream")
+
+
+@app.route("/v1/images/generations", methods=["POST", "OPTIONS"])
 @limiter.limit("100 per minute")
-def generate_images():
-    if request.method == 'OPTIONS':
-        return handle_options_request()
+def images():
+    if request.method == "OPTIONS":
+        return cors()
 
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith("Bearer "):
-        logger.error("Invalid Authentication")
-        return ERROR_HANDLER(1021)
+    api_key = get_api_key()
+    if not api_key:
+        return error(1021)
 
-    api_key = auth_header.split(" ")[1]
-    headers = {
-        'API-KEY': api_key,
-        'Content-Type': 'application/json'
-    }
-
-    request_data = request.json
-    prompt = request_data.get('prompt')
+    data = request.get_json(silent=True) or {}
+    prompt = data.get("prompt")
     if not prompt:
-        return ERROR_HANDLER(1412)  # No prompt provided
+        return error(1412)
 
-    num_images = request_data.get('n', 1)
-    image_size = request_data.get('size', "1024x1024")
-    model = request_data.get('model', 'black-forest-labs/flux-schnell')
-    if not model in image_generation_models:
-        return ERROR_HANDLER(1044, model)
+    model = data.get("model", "black-forest-labs/flux-schnell")
+    if model not in IMAGE_MODELS:
+        return error(1044, model)
 
     payload = {
         "type": "IMAGE_GENERATOR",
         "model": model,
         "promptObject": {
             "prompt": prompt,
-            "n": num_images,
-            "size": image_size
-        }
+            "n": data.get("n", 1),
+            "size": data.get("size", "1024x1024"),
+        },
     }
+    headers = {"API-KEY": api_key, "Content-Type": "application/json"}
 
     try:
-        logger.debug("Image Generation Requested.")
-        response = requests.post(ONE_MIN_API_URL + "?isStreaming=false", json=payload, headers=headers)
-        response.raise_for_status()
-        one_min_response = response.json()
+        r = requests.post(f"{FEATURES_URL}?isStreaming=false", json=payload, headers=headers, timeout=120)
+        r.raise_for_status()
+        urls = r.json()["aiRecord"]["aiRecordDetail"]["resultObject"]
+        return jsonify({"created": int(time.time()), "data": [{"url": u} for u in urls]})
+    except Exception as e:
+        logger.exception("image generation failed: %s", e)
+        return error(1044, model)
 
-        image_urls = one_min_response['aiRecord']['aiRecordDetail']['resultObject']
-        transformed_response = {
-            "created": int(time.time()),
-            "data": [{"url": url} for url in image_urls]
-        }
 
-        return jsonify(transformed_response), 200
+if __name__ == "__main__":
+    ip = socket.gethostbyname(socket.gethostname())
+    pub = requests.get("https://api.ipify.org", timeout=10).text
 
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Image generation failed: {str(e)}")
-        return ERROR_HANDLER(1044)  # Handle image generation error
-
-def handle_options_request():
-    response = make_response()
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
-    return response, 204
-
-def transform_response(one_min_response, request_data, prompt_token):
-    completion_token = calculate_token(one_min_response['aiRecord']["aiRecordDetail"]["resultObject"][0])
-    logger.debug(f"Finished processing Non-Streaming response. Completion tokens: {str(completion_token)}")
-    logger.debug(f"Total tokens: {str(completion_token + prompt_token)}")
-    return {
-        "id": f"chatcmpl-{uuid.uuid4()}",
-        "object": "chat.completion",
-        "created": int(time.time()),
-        "model": request_data.get('model', 'mistral-nemo'),
-        "choices": [
-            {
-                "index": 0,
-                "message": {
-                    "role": "assistant",
-                    "content": one_min_response['aiRecord']["aiRecordDetail"]["resultObject"][0],
-                },
-                "finish_reason": "stop"
-            }
-        ],
-        "usage": {
-            "prompt_tokens": prompt_token,
-            "completion_tokens": completion_token,
-            "total_tokens": prompt_token + completion_token
-        }
-    }
-    
-def set_response_headers(response):
-    response.headers['Content-Type'] = 'application/json'
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['X-Request-ID'] = str (uuid.uuid4())
-
-def handle_1min_error(response):
-    if response.status_code == 401:
-        return ERROR_HANDLER(1020)
-    
-    # Try to extract a meaningful error message from 1min.ai's response
-    try:
-        error_json = response.json()
-        upstream_detail = (
-            error_json.get("message")
-            or error_json.get("error")
-            or error_json.get("detail")
-            or response.text[:500]
-        )
-    except (ValueError, AttributeError):
-        upstream_detail = response.text[:500] if response.text else "No response body"
-
-    logger.error(
-        "1min.ai request failed with status %s: %s",
-        response.status_code,
-        upstream_detail
+    # Startup banner (simple “ad”)
+    logger.info(
+        f"""{printedcolors.Color.fg.lightcyan}
+====================================================
+Enjoying this self-hosted relay?
+You can get a hosted, managed version at:
+  https://shop.kokodev.cc
+with extra features like video generation,
+failover nodes, and more.
+====================================================
+{printedcolors.Color.reset}"""
     )
 
-    # Return a structured error that includes the upstream message
-    error_data = {
-        "message": f"1min.ai API error ({response.status_code}): {upstream_detail}",
-        "type": "upstream_error",
-        "param": None,
-        "code": f"upstream_{response.status_code}",
-    }
-    return jsonify({"error": error_data}), response.status_code
+    logger.info(
+        f"""{printedcolors.Color.fg.lightcyan}
+Server ready:
+Internal IP: {ip}:{PORT}
+Public IP: {pub}
+OpenAI-compatible endpoint:
+{ip}:{PORT}/v1
+{printedcolors.Color.reset}"""
+    )
 
-def stream_response(response, request_data, model, prompt_tokens):
-    """
-    Stream and normalize SSE response into OpenAI-compatible chunks.
-    """
-
-    chunks = []
-    current_event = None
-
-    stream_id = f"chatcmpl-{uuid.uuid4()}"
-
-    for raw_line in response.iter_lines(decode_unicode=False):
-        if raw_line == b"":
-            current_event = None
-            continue
-
-        try:
-            line = raw_line.decode("utf-8")
-        except UnicodeDecodeError:
-            logger.warning("Invalid UTF-8 in upstream stream; replacing undecodable bytes")
-            line = raw_line.decode("utf-8", errors="replace")
-
-        # Parse SSE event
-        if line.startswith("event:"):
-            current_event = line.split(":", 1)[1].strip()
-            continue
-
-        if not line.startswith("data:"):
-            continue
-
-        data = line.split(":", 1)[1].strip()
-
-        if data == "[DONE]":
-            break
-
-        event = current_event or "content"
-
-        if event == "content":
-            try:
-                parsed = json.loads(data)
-                if isinstance(parsed, dict):
-                    content = (
-                        parsed.get("content")
-                        or parsed.get("delta", {}).get("content")
-                        or ""
-                    )
-                else:
-                    content = ""
-            except json.JSONDecodeError:
-                content = data
-
-            if not content:
-                continue
-
-            chunks.append(content)
-
-            chunk = {
-                "id": stream_id,
-                "object": "chat.completion.chunk",
-                "created": int(time.time()),
-                "model": request_data.get("model", model),
-                "choices": [
-                    {
-                        "index": 0,
-                        "delta": {"content": content},
-                        "finish_reason": None
-                    }
-                ]
-            }
-
-            yield "data: " + json.dumps(chunk, ensure_ascii=False) + "\n\n"
-
-        elif event == "error":
-            logger.error("Streaming error from upstream: %s", data)
-
-        elif event == "done":
-            break
-
-    # Final assembly
-    full_text = "".join(chunks)
-    completion_tokens = calculate_token(full_text)
-
-    logger.debug(f"completion_tokens={completion_tokens}")
-    logger.debug(f"total_tokens={completion_tokens + prompt_tokens}")
-
-    final_chunk = {
-        "id": stream_id,
-        "object": "chat.completion.chunk",
-        "created": int(time.time()),
-        "model": request_data.get("model", model),
-        "choices": [
-            {
-                "index": 0,
-                "delta": {},
-                "finish_reason": "stop"
-            }
-        ],
-        "usage": {
-            "prompt_tokens": prompt_tokens,
-            "completion_tokens": completion_tokens,
-            "total_tokens": completion_tokens + prompt_tokens
-        }
-    }
-
-    yield "data: " + json.dumps(final_chunk, ensure_ascii=False) + "\n\n"
-    yield "data: [DONE]\n\n"
-
-if __name__ == '__main__':
-    internal_ip = socket.gethostbyname(socket.gethostname())
-    response = requests.get('https://api.ipify.org')
-    public_ip = response.text
-    logger.info(f"""{printedcolors.Color.fg.lightcyan}  
-Server is ready to serve at:
-Internal IP: {internal_ip}:{PORT}
-Public IP: {public_ip} (only if you've setup port forwarding on your router.)
-Enter this url to OpenAI clients supporting custom endpoint:
-{internal_ip}:{PORT}/v1
-If does not work, try:
-{internal_ip}:{PORT}/v1/chat/completions
-{printedcolors.Color.reset}""")
-    serve(app, host=HOST, port=PORT, threads=6) # Thread has a default of 4 if not specified. We use 6 to increase performance and allow multiple requests at once.
+    serve(app, host=HOST, port=int(os.getenv("THREADS", "6")))
